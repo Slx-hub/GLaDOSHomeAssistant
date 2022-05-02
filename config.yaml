@@ -1,0 +1,11 @@
+registration:
+ All:
+  - Debug
+ Greet:
+  - Conversation
+ Shutdown:
+  - System
+ ChangeLightState:
+  - Shield
+ ChangeLightColor:
+  - Shield
