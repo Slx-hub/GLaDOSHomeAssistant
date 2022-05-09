@@ -1,7 +1,8 @@
 from lib.I_intent_receiver import Receiver
 
 replies = {
- "Greet": "Hallo"
+ "Greet": "special/greet",
+ "Ping": "special/ping"
 }
 
 class Conversation(Receiver):

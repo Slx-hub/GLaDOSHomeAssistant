@@ -6,8 +6,8 @@ class System(Receiver):
 	def receive_intent(self, intent):
 		if(intent.intent == "Shutdown"):
 			Thread(target=shutdown).start()
-			return "Gute Nacht"
+			return "special/shutdown"
 
 def shutdown():
-	time.sleep(5)
+	time.sleep(10)
 	os.system("sudo shutdown -h now")

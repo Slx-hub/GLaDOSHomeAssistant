@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
-import json, yaml, os, time
-from threading import Thread
+import json, yaml
 
 from lib.I_intent_receiver import Intent
 from lib import receiver_shield
 from lib import receiver_debug
 from lib import receiver_conversation
 from lib import receiver_system
+from lib import receiver_timer
+from lib import module_speaker as speaker
 
 receivers = {
 	'Debug': receiver_debug.Debug(),
 	'Conversation': receiver_conversation.Conversation(),
 	'System': receiver_system.System(),
-	'Shield': receiver_shield.Shield()
+	'Shield': receiver_shield.Shield(),
+	'Timer': receiver_timer.Timer(),
 }
 
 config = {}
@@ -24,7 +26,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe("hermes/asr/textCaptured")
 	client.subscribe("hermes/intent/#")
 	client.subscribe("hermes/nlu/intentNotRecognized")
-	print("Connected. Waiting for intents.")
+	print("Connected!!")
 
 
 def on_disconnect(client, userdata, flags, rc):
@@ -38,8 +40,8 @@ def on_message(client, userdata, msg):
 	print("TOPIC: ", msg.topic)
 	print("PAYLOAD: ", payload)
 
-	if msg.topic == "hermes/hotword/porcupine_raspberry-pi/detected":
-		client.publish("hermes/tts/say", json.dumps({"text": "was"}))
+	if msg.topic.startswith('hermes/hotword/') and msg.topic.endswith('/detected'):
+		speaker.aplay_random_file("wake")
 		client.publish("hermes/asr/startListening", json.dumps({"stopOnSilence": "true"}))
 		return
 
@@ -59,19 +61,17 @@ def on_message(client, userdata, msg):
 		reply = receivers[receiver].receive_intent(intent)
 		if(reply != ""):
 			break
-
 	
 	if reply == "":
-		reply = "error"
-		print("Recognition failure")
+		speaker.aplay_random_file("command_unknown")
 	
-	client.publish("hermes/tts/say", json.dumps({"text": reply}))
+	speaker.aplay_random_file(reply)
 
 def payload_to_intent(payload):
 	intent = payload["intent"]["intentName"]
 	slots = {}
 	for slot in payload["slots"]:
-		slots[slot["entity"]] = slot["rawValue"]
+		slots[slot["slotName"]] = slot["value"]["value"]
 	return Intent(intent,slots)
 
 def get_slot_by_entity(json, entity):
@@ -80,7 +80,6 @@ def get_slot_by_entity(json, entity):
 			return slot
 	raise Exception('No such entity slot')
 
-# Read Config
 with open("config.yaml", 'r') as stream:
 	config = yaml.safe_load(stream)
 

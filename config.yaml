@@ -1,6 +1,8 @@
 registration:
  All:
   - Debug
+ Ping:
+  - Conversation
  Greet:
   - Conversation
  Shutdown:
@@ -9,3 +11,7 @@ registration:
   - Shield
  ChangeLightColor:
   - Shield
+ SetTimer:
+  - Timer
+ RemoveTimer:
+  - Timer

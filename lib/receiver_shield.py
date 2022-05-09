@@ -3,7 +3,7 @@ import time
 from lib.I_intent_receiver import Receiver
 from gpiozero import LED
 
-color_strings = ["aus","weiss","rot","gruen","blau","gelb","magenta","cyan"]
+color_strings = ["off","white","red","green","blue","yellow","magenta","cyan"]
 color_to_rgb = [[0,0,0],[1,1,1],[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1]]
 
 class Shield(Receiver):
@@ -16,10 +16,10 @@ class Shield(Receiver):
 
 	def receive_intent(self, intent):
 		if intent.intent == "ChangeLightState":
-			self.set_color("weiss" if intent.slots["state"] == "ein" else "aus")
+			self.set_color("weiss" if intent.slots["state"] == "on" else "off")
 		if intent.intent == "ChangeLightColor":
 			self.set_color(intent.slots["color"])
-		return "Okay"
+		return "command_success"
 
 	def set_pixels(self, r, g, b, a=100):
 		for led in range(self.PX_COUNT):
