@@ -9,6 +9,7 @@ from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
 from lib import module_speaker as speaker
+from lib import module_neopixel as neopixel
 
 receivers = {
 	'Debug': receiver_debug.Debug(),
@@ -41,12 +42,15 @@ def on_message(client, userdata, msg):
 	print("PAYLOAD: ", payload)
 
 	if msg.topic.startswith('hermes/hotword/') and msg.topic.endswith('/detected'):
+		neopixel.send_rgb_command(0b11111111, 9, 4, 0, 0, 255)
 		speaker.aplay_random_file("wake")
 		client.publish("hermes/asr/startListening", json.dumps({"stopOnSilence": "true"}))
 		return
 
 	if msg.topic == "hermes/asr/textCaptured":
+		neopixel.send_rgb_command(0b11111111, 4, 2, 0, 0, 255)
 		client.publish("hermes/nlu/query", json.dumps({"input": payload["text"]}))
+		return
 
 	if 'intent' not in payload:
 		return
@@ -61,11 +65,13 @@ def on_message(client, userdata, msg):
 		reply = receivers[receiver].receive_intent(intent)
 		if(reply != ""):
 			break
-	
+
 	if reply == "":
 		speaker.aplay_random_file("command_unknown")
-	
+		return
+
 	speaker.aplay_random_file(reply)
+	neopixel.send_rgb_command(0b11111111, 0, 0, 0, 0, 0)
 
 def payload_to_intent(payload):
 	intent = payload["intent"]["intentName"]
