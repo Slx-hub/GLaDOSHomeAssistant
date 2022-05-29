@@ -1,6 +1,6 @@
 import lib.module_apa102 as module_apa102
 import time
-from lib.I_intent_receiver import Receiver
+from lib.I_intent_receiver import Receiver, Reply
 from gpiozero import LED
 
 color_strings = ["off","white","red","green","blue","yellow","magenta","cyan"]
@@ -12,14 +12,13 @@ class Shield(Receiver):
 		self.dev = module_apa102.APA102(num_led=self.PX_COUNT)
 		self.power = LED(5)
 		self.power.on()
-		# self.set_pixels(1,1,1,1)
 
 	def receive_intent(self, intent):
 		if intent.intent == "ChangeLightState":
-			self.set_color("weiss" if intent.slots["state"] == "on" else "off")
+			self.set_color("white" if intent.slots["state"] == "on" else "off")
 		if intent.intent == "ChangeLightColor":
 			self.set_color(intent.slots["color"])
-		return "command_success"
+		return Reply(glados_path='command_success')
 
 	def set_pixels(self, r, g, b, a=100):
 		for led in range(self.PX_COUNT):

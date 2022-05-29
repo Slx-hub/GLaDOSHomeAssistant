@@ -1,4 +1,4 @@
-from lib.I_intent_receiver import Receiver
+from lib.I_intent_receiver import Receiver, Reply
 
 replies = {
  "Greet": "special/greet",
@@ -7,4 +7,5 @@ replies = {
 
 class Conversation(Receiver):
 	def receive_intent(self, intent):
-		return replies.get(intent.intent, "")
+		replytext = replies.get(intent.intent, "")
+		return Reply(glados_path=replytext)

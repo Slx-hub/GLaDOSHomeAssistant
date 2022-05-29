@@ -3,6 +3,7 @@ import paho.mqtt.client as mqtt
 import json, yaml
 
 from lib.I_intent_receiver import Intent
+from lib.I_intent_receiver import Reply
 from lib import receiver_shield
 from lib import receiver_debug
 from lib import receiver_conversation
@@ -10,6 +11,7 @@ from lib import receiver_system
 from lib import receiver_timer
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
+from lib import alias_converter
 
 receivers = {
 	'Debug': receiver_debug.Debug(),
@@ -41,37 +43,47 @@ def on_message(client, userdata, msg):
 	print("TOPIC: ", msg.topic)
 	print("PAYLOAD: ", payload)
 
-	if msg.topic.startswith('hermes/hotword/') and msg.topic.endswith('/detected'):
+	reply = handle_message(client, msg.topic, payload)
+	if reply:
+		speaker.aplay_random_file(reply.glados_path)
+		if reply.neopixel_color:
+			neopixel.send_rgb_command(*reply.neopixel_color)
+		if reply.tts_reply and reply.tts_reply != '':
+			client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
+
+def handle_message(client, topic, payload):
+
+	if topic.startswith('hermes/hotword/') and topic.endswith('/detected'):
 		neopixel.send_rgb_command(0b11111111, 9, 4, 0, 0, 255)
 		speaker.aplay_random_file("wake")
 		client.publish("hermes/asr/startListening", json.dumps({"stopOnSilence": "true"}))
 		return
 
-	if msg.topic == "hermes/asr/textCaptured":
-		neopixel.send_rgb_command(0b11111111, 4, 2, 0, 0, 255)
-		client.publish("hermes/nlu/query", json.dumps({"input": payload["text"]}))
-		return
+	if topic == "hermes/asr/textCaptured":
+		if float(payload['likelihood']) > 0.9:
+			client.publish("hermes/nlu/query", json.dumps({"input": payload["text"]}))
+			return Reply(neopixel_color=[0b11111111, 4, 2, 0, 0, 255])
+		else:
+			return Reply(glados_path = 'command_unknown')
 
 	if 'intent' not in payload:
-		return
+		return Reply(glados_path='command_unknown')
 
+	reply: Reply
 	intent = payload_to_intent(payload)
 
-	list = config["registration"]["All"]
-	list += config["registration"][intent.intent]
-	reply = ""
+	if intent.intent == "Alias":
+		intent = alias_converter.convert_alias(intent, payload['input'])
 
-	for receiver in config["registration"]["All"]:
+	for receiver in config["registration"][intent.intent]:
 		reply = receivers[receiver].receive_intent(intent)
-		if(reply != ""):
+		if(reply):
 			break
 
-	if reply == "":
-		speaker.aplay_random_file("command_unknown")
-		return
-
-	speaker.aplay_random_file(reply)
-	neopixel.send_rgb_command(0b11111111, 0, 0, 0, 0, 0)
+	if not reply:
+		return Reply(glados_path='command_unknown')
+	else:
+		return reply
 
 def payload_to_intent(payload):
 	intent = payload["intent"]["intentName"]

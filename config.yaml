@@ -1,6 +1,4 @@
 registration:
- All:
-  - Debug
  Ping:
   - Conversation
  Greet:
@@ -14,4 +12,6 @@ registration:
  SetTimer:
   - Timer
  RemoveTimer:
+  - Timer
+ QueryTimer:
   - Timer
