@@ -1,17 +1,13 @@
-registration:
- Ping:
+Conversation:
+  - Greet
   - Conversation
- Greet:
-  - Conversation
- Shutdown:
-  - System
- ChangeLightState:
-  - Shield
- ChangeLightColor:
-  - Shield
- SetTimer:
-  - Timer
- RemoveTimer:
-  - Timer
- QueryTimer:
-  - Timer
+  - Howareyou
+System:
+  - Shutdown
+Shield:
+  - ChangeLightState
+  - ChangeLightColor
+Timer:
+  - SetTimer
+  - RemoveTimer
+  - QueryTimer

@@ -12,6 +12,7 @@ class Reply:
 	tts_reply: str = ""
 
 class Intent:
-	def __init__(self, intent, slots):
+	def __init__(self, intent, slots, text = ""):
 		self.intent = intent
 		self.slots = slots
+		self.text = text

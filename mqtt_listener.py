@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import json, yaml
+import contextlib
 
 from lib.I_intent_receiver import Intent
 from lib.I_intent_receiver import Reply
 from lib import receiver_shield
-from lib import receiver_debug
 from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
@@ -14,7 +14,6 @@ from lib import module_neopixel as neopixel
 from lib import alias_converter
 
 receivers = {
-	'Debug': receiver_debug.Debug(),
 	'Conversation': receiver_conversation.Conversation(),
 	'System': receiver_system.System(),
 	'Shield': receiver_shield.Shield(),
@@ -75,7 +74,7 @@ def handle_message(client, topic, payload):
 	if intent.intent == "Alias":
 		intent = alias_converter.convert_alias(intent, payload['input'])
 
-	for receiver in config["registration"][intent.intent]:
+	for receiver in config[intent.intent]:
 		reply = receivers[receiver].receive_intent(intent)
 		if(reply):
 			break
@@ -87,10 +86,11 @@ def handle_message(client, topic, payload):
 
 def payload_to_intent(payload):
 	intent = payload["intent"]["intentName"]
+	text = payload["input"]
 	slots = {}
 	for slot in payload["slots"]:
 		slots[slot["slotName"]] = slot["value"]["value"]
-	return Intent(intent,slots)
+	return Intent(intent, slots, text)
 
 def get_slot_by_entity(json, entity):
 	for slot in json["slots"]:
@@ -99,14 +99,26 @@ def get_slot_by_entity(json, entity):
 	raise Exception('No such entity slot')
 
 with open("config.yaml", 'r') as stream:
-	config = yaml.safe_load(stream)
+	yaml_config = yaml.safe_load(stream)
+	for receiver in yaml_config:
+		for topic in yaml_config[receiver]:
+			if topic in config:
+				config[topic].add(receiver)
+			else:
+				config[topic] = [receiver]
 
 # Create MQTT client and connect to broker
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_message = on_message
+with open("logs/log.txt", "w") as o:
+	with contextlib.redirect_stdout(o):
+		client = mqtt.Client()
+		client.on_connect = on_connect
+		client.on_disconnect = on_disconnect
+		client.on_message = on_message
 
-client.connect("localhost", 1883)
-client.loop_forever()
+		client.connect("localhost", 1883)
+		try:
+			client.loop_forever()
+		except KeyboardInterrupt:
+			pass
+		print("Stopping...")
