@@ -2,6 +2,8 @@
 import paho.mqtt.client as mqtt
 import json, yaml
 import contextlib
+from multiprocessing import Process
+from time import sleep
 
 from lib.I_intent_receiver import Intent
 from lib.I_intent_receiver import Reply
@@ -9,16 +11,21 @@ from lib import receiver_shield
 from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
+from lib import receiver_zigbee
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
+from lib import scheduler
 
 receivers = {
 	'Conversation': receiver_conversation.Conversation(),
 	'System': receiver_system.System(),
 	'Shield': receiver_shield.Shield(),
 	'Timer': receiver_timer.Timer(),
+	'Zigbee': receiver_zigbee.Zigbee(),
 }
+
+enable_debug = True
 
 config = {}
 
@@ -39,8 +46,9 @@ def on_disconnect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	"""Called each time a message is received on a subscribed topic."""
 	payload = json.loads(msg.payload)
-	print("TOPIC: ", msg.topic)
-	print("PAYLOAD: ", payload)
+	if enable_debug:
+		print("TOPIC: ", msg.topic)
+		print("PAYLOAD: ", payload)
 
 	reply = handle_message(client, msg.topic, payload)
 	if reply:
@@ -49,6 +57,20 @@ def on_message(client, userdata, msg):
 			neopixel.send_rgb_command(*reply.neopixel_color)
 		if reply.tts_reply and reply.tts_reply != '':
 			client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
+		publish(reply)
+
+	print("\nREPLY: ", reply)
+
+def on_scheduled(command):
+	print("running scheduled job: ", command)
+	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "Alias"}, "slots": []}'))
+	if reply:
+		publish(reply)
+
+def publish(reply):
+	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
+		for i in range(len(reply.mqtt_topic)):
+			client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
 
 def handle_message(client, topic, payload):
 
@@ -109,16 +131,20 @@ with open("config.yaml", 'r') as stream:
 
 # Create MQTT client and connect to broker
 
-with open("logs/log.txt", "w") as o:
-	with contextlib.redirect_stdout(o):
-		client = mqtt.Client()
-		client.on_connect = on_connect
-		client.on_disconnect = on_disconnect
-		client.on_message = on_message
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_disconnect = on_disconnect
+client.on_message = on_message
 
-		client.connect("localhost", 1883)
-		try:
-			client.loop_forever()
-		except KeyboardInterrupt:
-			pass
-		print("Stopping...")
+client.connect("localhost", 1883)
+
+scheduler.setup(on_scheduled)
+proc = Process(target=scheduler.run)
+proc.start()
+
+try:
+	client.loop_forever()
+except KeyboardInterrupt:
+	pass
+print("Stopping...")
+proc.terminate()

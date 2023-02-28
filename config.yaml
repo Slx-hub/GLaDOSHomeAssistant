@@ -4,9 +4,11 @@ Conversation:
   - Howareyou
 System:
   - Shutdown
-Shield:
+Zigbee:
   - ChangeLightState
   - ChangeLightColor
+  - VRMode
+  - RLMode
 Timer:
   - SetTimer
   - RemoveTimer

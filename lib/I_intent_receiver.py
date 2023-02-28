@@ -10,6 +10,8 @@ class Reply:
 	glados_path: str = ""
 	neopixel_color: List = field(default_factory=lambda: [0b11111111, 0, 0, 0, 0, 0])
 	tts_reply: str = ""
+	mqtt_topic: List = field(default_factory=lambda: [])
+	mqtt_payload: List = field(default_factory=lambda: [])
 
 class Intent:
 	def __init__(self, intent, slots, text = ""):
