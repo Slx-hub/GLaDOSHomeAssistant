@@ -13,7 +13,7 @@ class Shield(Receiver):
 		self.power = LED(5)
 		self.power.on()
 
-	def receive_intent(self, intent):
+	def receive_intent(self, intent, settings):
 		if intent.intent == "ChangeLightState":
 			self.set_color("white" if intent.slots["state"] == "on" else "off")
 		if intent.intent == "ChangeLightColor":

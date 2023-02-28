@@ -1,15 +1,29 @@
-Conversation:
-  - Greet
-  - Conversation
-  - Howareyou
-System:
-  - Shutdown
-Zigbee:
-  - ChangeLightState
-  - ChangeLightColor
-  - VRMode
-  - RLMode
-Timer:
-  - SetTimer
-  - RemoveTimer
-  - QueryTimer
+IntentRouting:
+  Conversation:
+    - Greet
+    - Conversation
+    - Howareyou
+  System:
+    - Shutdown
+  Zigbee:
+    - ChangeLightState
+    - ChangeLightColor
+    - VRMode
+    - RLMode
+  Timer:
+    - SetTimer
+    - RemoveTimer
+    - QueryTimer
+HandlerSettings:
+  Zigbee:
+    ReceiverGroups:
+      livingroom:
+        - showcase
+        - couchlamp
+    ReceiverProperties:
+      showcase:
+        default: '"brightness":100,"color_mode":"color_temp","color_temp":250'
+        dim: '"brightness":40,"color_mode":"color_temp","color_temp":250'
+      couchlamp:
+        default: '"brightness":40'
+        dim: '"brightness":10'

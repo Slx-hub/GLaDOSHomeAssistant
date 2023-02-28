@@ -10,7 +10,7 @@ from lib import module_neopixel as neopixel
 class Timer(Receiver):
 	timer_dict = dict()
 
-	def receive_intent(self, intent):
+	def receive_intent(self, intent, settings):
 		# because threads cant FUCKING clean up after themselves...
 		clean_timers(self.timer_dict)
 

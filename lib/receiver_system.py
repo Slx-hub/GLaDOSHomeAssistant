@@ -3,7 +3,7 @@ import time, os
 from threading import Thread
 
 class System(Receiver):
-	def receive_intent(self, intent):
+	def receive_intent(self, intent, settings):
 		if(intent.intent == "Shutdown"):
 			Thread(target=shutdown).start()
 			return Reply(glados_path='special/shutdown')

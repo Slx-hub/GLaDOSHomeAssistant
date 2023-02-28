@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 class Receiver:
-	def receive_intent(self, intent):
+	def receive_intent(self, intent, settings):
 		print("Override receive_intent!")
 
 @dataclass

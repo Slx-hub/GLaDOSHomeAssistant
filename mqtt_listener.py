@@ -27,7 +27,8 @@ receivers = {
 
 enable_debug = True
 
-config = {}
+config_IntentRouting = {}
+config_HandlerSettings = {}
 
 def on_connect(client, userdata, flags, rc):
 	"""Called when connected to MQTT broker."""
@@ -93,11 +94,18 @@ def handle_message(client, topic, payload):
 	reply: Reply
 	intent = payload_to_intent(payload)
 
+	if intent.intent == "Reload-Config":
+		load_config()
+		return Reply(glados_path='command_success')
+
 	if intent.intent == "Alias":
 		intent = alias_converter.convert_alias(intent, payload['input'])
 
-	for receiver in config[intent.intent]:
-		reply = receivers[receiver].receive_intent(intent)
+	if intent.intent not in config_IntentRouting:
+		return Reply(glados_path='command_unknown')
+
+	for receiver in config_IntentRouting[intent.intent]:
+		reply = receivers[receiver].receive_intent(intent, config_HandlerSettings.get(receiver))
 		if(reply):
 			break
 
@@ -120,14 +128,23 @@ def get_slot_by_entity(json, entity):
 			return slot
 	raise Exception('No such entity slot')
 
-with open("config.yaml", 'r') as stream:
-	yaml_config = yaml.safe_load(stream)
-	for receiver in yaml_config:
-		for topic in yaml_config[receiver]:
-			if topic in config:
-				config[topic].add(receiver)
-			else:
-				config[topic] = [receiver]
+def load_config():
+	print("Reloading config file.")
+	global config_IntentRouting
+	global config_HandlerSettings
+	config_IntentRouting = {}
+	config_HandlerSettings = {}
+	with open("config.yaml", 'r') as stream:
+		yaml_config = yaml.safe_load(stream)
+		for receiver in yaml_config['IntentRouting']:
+			for topic in yaml_config['IntentRouting'][receiver]:
+				if topic in config_IntentRouting:
+					config_IntentRouting[topic].add(receiver)
+				else:
+					config_IntentRouting[topic] = [receiver]
+		config_HandlerSettings = yaml_config['HandlerSettings']
+		print('Intent Routing:', config_IntentRouting)
+		print('Handler Settings:', config_HandlerSettings)
 
 # Create MQTT client and connect to broker
 
@@ -135,6 +152,7 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.on_message = on_message
+load_config()
 
 client.connect("localhost", 1883)
 

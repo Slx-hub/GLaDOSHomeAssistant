@@ -8,7 +8,7 @@ replies = {
 }
 
 class Conversation(Receiver):
-	def receive_intent(self, intent):
+	def receive_intent(self, intent, settings):
 		replytext = replies.get(intent.intent)
 		if not replytext:
 			replytext = replies.get(intent.text, "")

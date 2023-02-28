@@ -1,22 +1,19 @@
 from lib.I_intent_receiver import Receiver, Reply
 
-groups = {
-  "livingroom": ["showcase","couchlamp"]
-}
-
 class Zigbee(Receiver):
 
-    def receive_intent(self, intent):
+    def receive_intent(self, intent, settings):
 
         if intent.intent == "ChangeLightState":
             sources = [intent.slots["source"]]
             reply_topic = []
             reply_payload = []
-            if intent.slots["source"] in groups:
-                sources = groups[intent.slots["source"]]
+            mode = intent.slots.get("mode","default")
+            if intent.slots["source"] in settings["ReceiverGroups"]:
+                sources = settings["ReceiverGroups"][intent.slots["source"]]
             for source in sources:
                 reply_topic.append('z2mq/' + source + '/set')
-                reply_payload.append('{"state":"' + intent.slots["state"] + '","brightness":' + intent.slots["brightness"] + ',"color_mode":"color_temp","color_temp":250}')
+                reply_payload.append('{"state":"' + intent.slots["state"] + '",' + settings["ReceiverProperties"][source][mode] + '}')
         
         if intent.intent == "VRMode":
             reply_topic = ['z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
