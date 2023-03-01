@@ -27,3 +27,11 @@ HandlerSettings:
       couchlamp:
         default: '"brightness":40'
         dim: '"brightness":10'
+SchedulerSettings:
+  daily:
+    "18:00": "scheduled_evening_light"
+    "23:00": "scheduled_night_light"
+    "01:00": "scheduled_light_off"
+  hourly:
+  minutely:
+  secondly:

@@ -27,9 +27,6 @@ receivers = {
 
 enable_debug = True
 
-config_IntentRouting = {}
-config_HandlerSettings = {}
-
 def on_connect(client, userdata, flags, rc):
 	"""Called when connected to MQTT broker."""
 	client.subscribe("hermes/hotword/#")
@@ -64,6 +61,8 @@ def on_message(client, userdata, msg):
 
 def on_scheduled(command):
 	print("running scheduled job: ", command)
+	if command.startswith('debug'):
+		return
 	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "Alias"}, "slots": []}'))
 	if reply:
 		publish(reply)
@@ -128,6 +127,10 @@ def get_slot_by_entity(json, entity):
 			return slot
 	raise Exception('No such entity slot')
 
+config_IntentRouting = {}
+config_HandlerSettings = {}
+proc = Process()
+
 def load_config():
 	print("Reloading config file.")
 	global config_IntentRouting
@@ -143,8 +146,18 @@ def load_config():
 				else:
 					config_IntentRouting[topic] = [receiver]
 		config_HandlerSettings = yaml_config['HandlerSettings']
+		config_SchedulerSettings = yaml_config['SchedulerSettings']
+
+		global proc
+		if proc and proc.is_alive():
+			proc.terminate()
+		scheduler.setup(on_scheduled, config_SchedulerSettings)
+		proc = Process(target=scheduler.run)
+		proc.start()
+
 		print('Intent Routing:', config_IntentRouting)
 		print('Handler Settings:', config_HandlerSettings)
+		print('Scheduler Settings:', config_SchedulerSettings)
 
 # Create MQTT client and connect to broker
 
@@ -155,10 +168,6 @@ client.on_message = on_message
 load_config()
 
 client.connect("localhost", 1883)
-
-scheduler.setup(on_scheduled)
-proc = Process(target=scheduler.run)
-proc.start()
 
 try:
 	client.loop_forever()
