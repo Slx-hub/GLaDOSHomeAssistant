@@ -165,9 +165,9 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.on_message = on_message
-load_config()
-
 client.connect("localhost", 1883)
+
+load_config()
 
 try:
 	client.loop_forever()

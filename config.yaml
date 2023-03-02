@@ -34,4 +34,3 @@ SchedulerSettings:
     "01:00": "scheduled_light_off"
   hourly:
   minutely:
-  secondly:

@@ -12,12 +12,9 @@ def setup(callback, settings):
     if settings["minutely"]:
         for key, value in settings["minutely"].items():
             schedule.every().minute.at(key).do(callback, value)
-    if settings["secondly"]:
-        for key, value in settings["secondly"].items():
-            schedule.every().second.do(callback, value)
     print("JOBS:", schedule.get_jobs())
 
 def run():
     while True:
         schedule.run_pending()
-        sleep(1)
+        sleep(30)
