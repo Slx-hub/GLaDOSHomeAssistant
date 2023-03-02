@@ -67,10 +67,20 @@ def on_scheduled(command):
 	if reply:
 		publish(reply)
 
+zig_receiver_states = {}
+
 def publish(reply):
+	global zig_receiver_states
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
-			client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
+			if reply.mqtt_payload[i] != "<restore>":
+				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
+				if reply.override_state:
+					zig_receiver_states[reply.mqtt_topic[i]] = reply.mqtt_payload[i]
+			elif reply.mqtt_topic[i] in zig_receiver_states:
+				client.publish(reply.mqtt_topic[i], zig_receiver_states[reply.mqtt_topic[i]])
+				
+
 
 def handle_message(client, topic, payload):
 

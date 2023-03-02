@@ -12,6 +12,7 @@ class Reply:
 	tts_reply: str = ""
 	mqtt_topic: List = field(default_factory=lambda: [])
 	mqtt_payload: List = field(default_factory=lambda: [])
+	override_state: bool = True
 
 class Intent:
 	def __init__(self, intent, slots, text = ""):

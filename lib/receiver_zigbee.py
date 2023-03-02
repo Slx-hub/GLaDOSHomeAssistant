@@ -15,11 +15,13 @@ class Zigbee(Receiver):
                 reply_topic.append('z2mq/' + source + '/set')
                 reply_payload.append('{"state":"' + intent.slots["state"] + '",' + settings["ReceiverProperties"][source][mode] + '}')
         
+        override_state = True
         if intent.intent == "VRMode":
-            reply_topic = ['z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
-            reply_payload = ['{"state":"on","brightness":100,"color_mode":"xy","color":{"x":0.3804,"y":0.3767}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
+            reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
+            reply_payload = ['{"state":"off"}','{"state":"on","brightness":100,"color_mode":"xy","color":{"x":0.1459,"y":0.2382}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
+            override_state = False
         if intent.intent == "RLMode":
-            reply_topic = ['z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
-            reply_payload = ['{"state":"on","brightness":100,"color_mode":"color_temp","color_temp":250}','{"state":"off"}','{"state":"off"}','{"state":"off"}']
+            reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
+            reply_payload = ['<restore>','<restore>','{"state":"off"}','{"state":"off"}','{"state":"off"}']
             
-        return Reply(glados_path='command_success', mqtt_topic= reply_topic, mqtt_payload= reply_payload)
+        return Reply(glados_path='command_success', mqtt_topic= reply_topic, mqtt_payload= reply_payload, override_state= override_state)
