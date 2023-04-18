@@ -12,6 +12,7 @@ from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
 from lib import receiver_zigbee
+from lib import receiver_sonos
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
@@ -23,6 +24,7 @@ receivers = {
 	'Shield': receiver_shield.Shield(),
 	'Timer': receiver_timer.Timer(),
 	'Zigbee': receiver_zigbee.Zigbee(),
+	'Sonos': receiver_sonos.Sonos(),
 }
 
 enable_debug = True
@@ -91,6 +93,7 @@ def handle_message(client, topic, payload):
 		return
 
 	if topic == "hermes/asr/textCaptured":
+		client.publish("hermes/asr/stopListening", json.dumps({"siteId": "default", "sessionId": ""}))
 		if float(payload['likelihood']) > 0.9:
 			client.publish("hermes/nlu/query", json.dumps({"input": payload["text"]}))
 			return Reply(neopixel_color=[0b11111111, 4, 2, 0, 0, 255])
@@ -178,6 +181,9 @@ client.on_message = on_message
 client.connect("localhost", 1883)
 
 load_config()
+
+for receiver in receivers:
+    receivers[receiver].setup(config_HandlerSettings.get(receiver))
 
 try:
 	client.loop_forever()
