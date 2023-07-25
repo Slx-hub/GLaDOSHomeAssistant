@@ -5,6 +5,7 @@ IntentRouting:
     - Howareyou
   System:
     - Shutdown
+    - Reboot
   Zigbee:
     - ChangeLightState
     - ChangeLightColor
@@ -35,8 +36,9 @@ HandlerSettings:
     
 SchedulerSettings:
   daily:
-    "20:00": "scheduled_evening_light"
-    "23:00": "scheduled_night_light"
-    "01:00": "scheduled_light_off"
+    "21:00": "Alias> scheduled_evening_light"
+    "22:00": "Alias> scheduled_night_light"
+    "00:00": "Alias> scheduled_light_off"
+    "02:00": "Reboot>"
   hourly:
   minutely:

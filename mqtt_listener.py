@@ -61,11 +61,9 @@ def on_message(client, userdata, msg):
 
 	print("\nREPLY: ", reply)
 
-def on_scheduled(command):
-	print("running scheduled job: ", command)
-	if command.startswith('debug'):
-		return
-	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "Alias"}, "slots": []}'))
+def on_scheduled(intent, command):
+	print("running scheduled job: ", intent, command)
+	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "' + intent + '"}, "slots": []}'))
 	if reply:
 		publish(reply)
 

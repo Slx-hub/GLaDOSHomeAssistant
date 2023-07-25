@@ -1,20 +1,26 @@
 from time import sleep
-import schedule
+import schedule as sched
 
 def setup(callback, settings):
-    schedule.clear()
+    sched.clear()
     if settings["daily"]:
         for key, value in settings["daily"].items():
-            schedule.every().day.at(key).do(callback, value)
+            schedule(sched.every().day.at(key), callback, value)
     if settings["hourly"]:
         for key, value in settings["hourly"].items():
-            schedule.every().hour.at(key).do(callback, value)
+            schedule(sched.every().hour.at(key), callback, value)
     if settings["minutely"]:
         for key, value in settings["minutely"].items():
-            schedule.every().minute.at(key).do(callback, value)
-    print("JOBS:", schedule.get_jobs())
+            schedule(sched.every().minute.at(key), callback, value)
+    print("JOBS:", sched.get_jobs())
+
+def schedule(scheduler, callback, config_val):
+    elements = config_val.split(">")
+    intent = elements[0]
+    command = elements[1].strip()
+    scheduler.do(callback, intent, command)
 
 def run():
     while True:
-        schedule.run_pending()
+        sched.run_pending()
         sleep(30)
