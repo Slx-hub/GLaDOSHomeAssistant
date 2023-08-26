@@ -9,9 +9,9 @@ def setup(callback, settings):
     if settings["hourly"]:
         for key, value in settings["hourly"].items():
             schedule(sched.every().hour.at(key), callback, value)
-    if settings["minutely"]:
-        for key, value in settings["minutely"].items():
-            schedule(sched.every().minute.at(key), callback, value)
+    if settings["everyXminutes"]:
+        for key, value in settings["everyXminutes"].items():
+            schedule(sched.every(int(key)).minutes, callback, value)
     print("JOBS:", sched.get_jobs())
 
 def schedule(scheduler, callback, config_val):

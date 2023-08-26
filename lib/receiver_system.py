@@ -11,14 +11,14 @@ class System(Receiver):
 			Thread(target=reboot).start()
 			return Reply(glados_path='special/shutdown')
 		if(intent.intent == "HealthCheck"):
-			return healthCheck()
+			return healthCheck(settings)
 		
-def healthCheck():
-	print(psutil.virtual_memory().percent)
-	if psutil.virtual_memory().percent > 80.0:
+def healthCheck(settings):
+	threshold = settings.get("ram-threshold", 80.0)
+	if psutil.virtual_memory().percent > threshold:
 		Thread(target=reboot).start()
 		return Reply(glados_path='special/shutdown/good night.wav')
-	return Reply(neopixel_color=[0b00101010, 30, 0, 0, 0, 2])
+	return Reply(neopixel_color=[0b11111111, 8, 30, 0, 0, 3])
 
 def shutdown():
 	time.sleep(10)

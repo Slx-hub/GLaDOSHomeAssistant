@@ -34,6 +34,8 @@ HandlerSettings:
   Sonos:
     default-device: 'Living Room'
     default-volume: 30
+  System:
+    ram-threshold: 80.0
     
 SchedulerSettings:
   daily:
@@ -42,4 +44,5 @@ SchedulerSettings:
     "00:00": "Alias> scheduled_light_off"
     "02:00": "Reboot>"
   hourly:
-  minutely:
+  everyXminutes:
+    "10": "HealthCheck>"
