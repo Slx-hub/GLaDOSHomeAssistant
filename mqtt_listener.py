@@ -86,7 +86,7 @@ def handle_message(client, topic, payload):
 
 	if topic.startswith('hermes/hotword/') and topic.endswith('/detected'):
 		neopixel.send_rgb_command(0b11111111, 9, 4, 0, 0, 255)
-		speaker.aplay_random_file("wake")
+		speaker.aplay_random_file("wake", config_GeneralSettings["SoundPack"])
 		client.publish("hermes/asr/startListening", json.dumps({"stopOnSilence": "true"}))
 		return
 
