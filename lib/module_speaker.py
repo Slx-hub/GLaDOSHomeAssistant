@@ -1,22 +1,24 @@
 import os, random
 from subprocess import call
 
-def aplay_random_file(folder):
-    if not folder or folder == "":
+def aplay_random_file(path, soundpack):
+    if not path or path == "":
         return 
 
-    if folder.endswith(".wav"):
-        aplay_file(folder)
-        return
+    if path.endswith(".wav"):
+        aplay_file(path, soundpack)
+    else:
+        aplay_random_file(path, soundpack)
 
-    filepath = "lib/replies/" + folder + "/"
+def aplay_file(file, soundpack):
+    aplay_wav("lib/replies/" + soundpack + "/" + file)
+
+def aplay_random_file(path, soundpack):
+    filepath = "lib/replies/" + soundpack + "/" + path + "/"
     if not os.path.isdir(filepath):
         filepath = "lib/replies/error/"
     file = random.choice(os.listdir(filepath))
     aplay_wav(filepath + file)
-
-def aplay_file(file):
-    aplay_wav("lib/replies/" + file)
 
 def aplay_wav(file):
     call(["aplay", "-Dsysdefault:CARD=BR21", file])

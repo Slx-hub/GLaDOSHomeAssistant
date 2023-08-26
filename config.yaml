@@ -1,3 +1,6 @@
+GeneralSettings:
+  SoundPack: "eleven"
+
 IntentRouting:
 
   Conversation:

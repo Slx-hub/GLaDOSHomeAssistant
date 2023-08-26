@@ -52,7 +52,7 @@ def on_message(client, userdata, msg):
 
 	reply = handle_message(client, msg.topic, payload)
 	if reply:
-		speaker.aplay_random_file(reply.glados_path)
+		speaker.aplay_random_file(reply.glados_path, config_GeneralSettings["SoundPack"])
 		if reply.neopixel_color:
 			neopixel.send_rgb_command(*reply.neopixel_color)
 		if reply.tts_reply and reply.tts_reply != '':
@@ -140,14 +140,17 @@ def get_slot_by_entity(json, entity):
 
 config_IntentRouting = {}
 config_HandlerSettings = {}
+config_GeneralSettings = {}
 proc = Process()
 
 def load_config():
 	print("Reloading config file.")
 	global config_IntentRouting
 	global config_HandlerSettings
+	global config_GeneralSettings
 	config_IntentRouting = {}
 	config_HandlerSettings = {}
+	config_GeneralSettings = {}
 	with open("config.yaml", 'r') as stream:
 		yaml_config = yaml.safe_load(stream)
 		for receiver in yaml_config['IntentRouting']:
@@ -158,6 +161,7 @@ def load_config():
 					config_IntentRouting[topic] = [receiver]
 		config_HandlerSettings = yaml_config['HandlerSettings']
 		config_SchedulerSettings = yaml_config['SchedulerSettings']
+		config_GeneralSettings = yaml_config['GeneralSettings']
 
 		global proc
 		if proc and proc.is_alive():
