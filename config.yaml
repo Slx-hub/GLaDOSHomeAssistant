@@ -1,4 +1,5 @@
 IntentRouting:
+
   Conversation:
     - Greet
     - Conversation
@@ -17,7 +18,9 @@ IntentRouting:
     - SetTimer
     - RemoveTimer
     - QueryTimer
+
 HandlerSettings:
+
   Zigbee:
     ReceiverGroups:
       livingroom:
@@ -31,13 +34,23 @@ HandlerSettings:
         default: '"brightness":40'
         dim: '"brightness":10'
         min: '"brightness":2'
+
   Sonos:
     default-device: 'Living Room'
     default-volume: 30
+
   System:
     ram-threshold: 80.0
+
+  Conversation:
+    "Greet": "special/greet"
+    "Howareyou": "special/howareyou"
+    "ping": "special/conversation/pong.wav"
+    "hello there": "special/conversation/kenobi.wav"
+    "say the line": "special/test"
     
 SchedulerSettings:
+
   daily:
     "20:00": "Alias> scheduled_evening_light"
     "22:00": "Alias> scheduled_night_light"
