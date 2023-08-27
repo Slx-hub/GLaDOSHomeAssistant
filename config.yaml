@@ -51,6 +51,7 @@ HandlerSettings:
     "ping": "special/conversation/pong.wav"
     "hello there": "special/conversation/kenobi.wav"
     "say the line": "special/test"
+    "do nothing": "command_success"
     
 SchedulerSettings:
 
