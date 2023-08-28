@@ -15,3 +15,6 @@ Bash shortcuts:
 - rhstart, rhstop, rhrestart -> calls respective docker functions
 - glrestart -> restarts GlaDOS Module
 - glados -> shows active GlaDOS Log
+
+Linux command to convert mp3 to wav:
+```for i in *.mp3; do ffmpeg -i "$i" "${i%.*}.wav"; done ```
