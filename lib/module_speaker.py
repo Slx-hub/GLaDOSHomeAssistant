@@ -1,7 +1,7 @@
 import os, random
 from subprocess import call
 
-def aplay_random_file(path, soundpack):
+def aplay_given_path(path, soundpack):
     if not path or path == "":
         return 
 
