@@ -64,7 +64,8 @@ class Timer(Receiver):
 	def timer_ring(self, id):
 		print("done with timer ", id)
 		neopixel.send_rgb_command(0b11111111, 5, 0, 0, 0, 50)
-		module_speaker.aplay_given_path("special/timer/ring")
+		# i'm really sorry i have to hardcode the soundpack here, i'll take care of that at some point for sure!
+		module_speaker.aplay_given_path("special/timer/ring", "eleven")
 	
 	def init_timer_task(self, seconds, id):
 		time.sleep(seconds)
