@@ -6,7 +6,6 @@ IntentRouting:
   Conversation:
     - Greet
     - Conversation
-    - Howareyou
   System:
     - Shutdown
     - Reboot
@@ -29,6 +28,7 @@ HandlerSettings:
       livingroom:
         - showcase
         - couchlamp
+
     ReceiverProperties:
       showcase:
         default: '"brightness":100,"color_mode":"color_temp","color_temp":250'
@@ -38,6 +38,11 @@ HandlerSettings:
         dim: '"brightness":10'
         min: '"brightness":2'
 
+    ResponseMap:
+      "VRMode": "special/lighting/vr"
+      "CineMode": "special/lighting/cinema"
+      "RLMode": "special/lighting/rl"
+
   Sonos:
     default-device: 'Living Room'
     default-volume: 30
@@ -46,12 +51,11 @@ HandlerSettings:
     ram-threshold: 80.0
 
   Conversation:
-    "Greet": "special/greet"
-    "Howareyou": "special/howareyou"
-    "ping": "special/conversation/pong.wav"
-    "hello there": "special/conversation/kenobi.wav"
-    "say the line": "special/test"
-    "do nothing": "command_success"
+    ResponseMap:
+      "Greet": "special/greet"
+      "ping": "special/conversation/pong.wav"
+      "hello there": "special/conversation/kenobi.wav"
+      "do nothing": "command_success"
     
 SchedulerSettings:
 

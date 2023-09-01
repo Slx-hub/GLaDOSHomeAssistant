@@ -27,7 +27,7 @@ receivers = {
 	'Sonos': receiver_sonos.Sonos(),
 }
 
-enable_debug = True
+enable_debug = False
 
 def on_connect(client, userdata, flags, rc):
 	"""Called when connected to MQTT broker."""
@@ -50,7 +50,11 @@ def on_message(client, userdata, msg):
 		print("TOPIC: ", msg.topic)
 		print("PAYLOAD: ", payload)
 
-	reply = handle_message(client, msg.topic, payload)
+	try:
+		reply = handle_message(client, msg.topic, payload)
+	except:
+		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
+
 	if reply:
 		speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
 		if reply.neopixel_color:
@@ -59,7 +63,8 @@ def on_message(client, userdata, msg):
 			client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
 		publish(reply)
 
-	print("\nREPLY: ", reply)
+	if enable_debug:
+		print("\nREPLY: ", reply)
 
 def on_scheduled(intent, command):
 	print("running scheduled job: ", intent, command)

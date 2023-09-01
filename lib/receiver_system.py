@@ -17,8 +17,8 @@ def healthCheck(settings):
 	threshold = settings.get("ram-threshold", 80.0)
 	if psutil.virtual_memory().percent > threshold:
 		Thread(target=reboot).start()
-		return Reply(glados_path='special/shutdown/good night.wav')
-	return Reply(neopixel_color=[0b11111111, 8, 30, 0, 0, 3])
+		return Reply(glados_path='special/healthcheck/better restart.wav')
+	return Reply(glados_path='special/healthcheck/all good.wav', neopixel_color=[0b11111111, 8, 30, 0, 0, 3])
 
 def shutdown():
 	time.sleep(10)

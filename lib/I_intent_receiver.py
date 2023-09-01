@@ -8,6 +8,16 @@ class Receiver:
 	def receive_intent(self, intent, settings):
 		print("Override receive_intent!")
 
+	def get_reply_from_settings(intent, settings, default='command_success'):
+		map = settings.get('ResponseMap')
+		if map:
+			replytext = map.get(intent.intent)
+			if not replytext:
+				replytext = map.get(intent.text)
+			if replytext:
+				return replytext
+		return default
+
 @dataclass
 class Reply:
 	glados_path: str = ""

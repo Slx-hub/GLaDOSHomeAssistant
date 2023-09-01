@@ -28,4 +28,4 @@ class Zigbee(Receiver):
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
             reply_payload = ['<restore>','<restore>','{"state":"off"}','{"state":"off"}','{"state":"off"}']
             
-        return Reply(glados_path='command_success', mqtt_topic= reply_topic, mqtt_payload= reply_payload, override_state= override_state)
+        return Reply(glados_path=Receiver.get_reply_from_settings(intent, settings), mqtt_topic= reply_topic, mqtt_payload= reply_payload, override_state= override_state)
