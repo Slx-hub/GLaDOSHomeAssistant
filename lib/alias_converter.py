@@ -8,8 +8,7 @@ dict = {'noodle time': Intent(intent='SetTimer', slots={'amount': 8, 'scale': 'm
         'scheduled_alarm_off': Intent(intent='ChangeLightState', slots={'state': 'off', 'source': 'bedroom'}),
         'scheduled_alarm_low': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'dim', 'source': 'bedroom'}),
         'scheduled_alarm_medium': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'default', 'source': 'bedroom'}),
-        'scheduled_alarm_full': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'full', 'source': 'bedroom'}),
-        'scheduled_alarm_ring': Intent(intent='Scheduled', text='scheduled_alarm_ring')}
+        'scheduled_alarm_full': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'full', 'source': 'bedroom'})}
 
 def convert_alias(intent, text):
     if dict[text]:

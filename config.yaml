@@ -82,12 +82,12 @@ SchedulerSettings:
     "07:15": "Alias> scheduled_alarm_low"
     "07:20": "Alias> scheduled_alarm_medium"
     "07:25": "Alias> scheduled_alarm_full"
-    "07:30": "Alias> scheduled_alarm_ring"
+    "07:30": "Scheduled> scheduled_alarm_ring"
     "07:35": "Alias> scheduled_alarm_off"
 
-    "08:00": "Alias> scheduled_reminder_pills"
-    "15:00": "Alias> scheduled_reminder_pills"
-    "22:00": "Alias> scheduled_reminder_pills"
+    "08:00": "Scheduled> scheduled_reminder_pills"
+    "15:00": "Scheduled> scheduled_reminder_pills"
+    "22:00": "Scheduled> scheduled_reminder_pills"
   hourly:
   everyXminutes:
     "10": "HealthCheck>"
