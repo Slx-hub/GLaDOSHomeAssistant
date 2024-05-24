@@ -69,6 +69,7 @@ HandlerSettings:
       "hello there": "special/conversation/kenobi.wav"
       "do nothing": "command_success"
       "scheduled_alarm_ring": "special/alarm"
+      "scheduled_reminder_pills": "special/reminder/pills.wav"
     
 SchedulerSettings:
 
@@ -83,6 +84,10 @@ SchedulerSettings:
     "07:25": "Alias> scheduled_alarm_full"
     "07:30": "Alias> scheduled_alarm_ring"
     "07:35": "Alias> scheduled_alarm_off"
+
+    "08:00": "Alias> scheduled_reminder_pills"
+    "15:00": "Alias> scheduled_reminder_pills"
+    "22:00": "Alias> scheduled_reminder_pills"
   hourly:
   everyXminutes:
     "10": "HealthCheck>"
