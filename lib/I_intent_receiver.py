@@ -26,9 +26,10 @@ class Reply:
 	mqtt_topic: List = field(default_factory=lambda: [])
 	mqtt_payload: List = field(default_factory=lambda: [])
 	override_state: bool = True
+	override_silent: bool = False
 
 class Intent:
-	def __init__(self, intent, slots, text = ""):
+	def __init__(self, intent, slots = "", text = ""):
 		self.intent = intent
 		self.slots = slots
 		self.text = text

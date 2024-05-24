@@ -6,6 +6,7 @@ IntentRouting:
   Conversation:
     - Greet
     - Conversation
+    - Scheduled
   System:
     - Shutdown
     - Reboot
@@ -28,6 +29,9 @@ HandlerSettings:
       livingroom:
         - showcase
         - couchlamp
+      bedroom:
+        - bedlightr
+        - bedlightl
 
     ReceiverProperties:
       showcase:
@@ -37,6 +41,14 @@ HandlerSettings:
         default: '"brightness":40'
         dim: '"brightness":10'
         min: '"brightness":2'
+      bedlightr:
+        default: '"brightness":80'
+        dim: '"brightness":10'
+        full: '"brightness":250'
+      bedlightl:
+        default: '"brightness":80'
+        dim: '"brightness":10'
+        full: '"brightness":250'
 
     ResponseMap:
       "VRMode": "special/lighting/vr"
@@ -56,14 +68,21 @@ HandlerSettings:
       "ping": "special/conversation/pong.wav"
       "hello there": "special/conversation/kenobi.wav"
       "do nothing": "command_success"
+      "scheduled_alarm_ring": "special/alarm"
     
 SchedulerSettings:
 
   daily:
-    "20:00": "Alias> scheduled_evening_light"
+    "20:30": "Alias> scheduled_evening_light"
     "22:00": "Alias> scheduled_night_light"
-    "00:00": "Alias> scheduled_light_off"
+    "23:00": "Alias> scheduled_light_off"
     "02:00": "Reboot>"
+
+    "07:15": "Alias> scheduled_alarm_low"
+    "07:20": "Alias> scheduled_alarm_medium"
+    "07:25": "Alias> scheduled_alarm_full"
+    "07:30": "Alias> scheduled_alarm_ring"
+    "07:35": "Alias> scheduled_alarm_off"
   hourly:
   everyXminutes:
     "10": "HealthCheck>"

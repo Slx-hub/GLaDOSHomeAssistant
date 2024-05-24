@@ -27,7 +27,7 @@ receivers = {
 	'Sonos': receiver_sonos.Sonos(),
 }
 
-enable_debug = False
+enable_debug = True
 
 def on_connect(client, userdata, flags, rc):
 	"""Called when connected to MQTT broker."""
@@ -55,13 +55,7 @@ def on_message(client, userdata, msg):
 	except:
 		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
 
-	if reply:
-		speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
-		if reply.neopixel_color:
-			neopixel.send_rgb_command(*reply.neopixel_color)
-		if reply.tts_reply and reply.tts_reply != '':
-			client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
-		publish(reply)
+	handle_reply(reply, True)
 
 	if enable_debug:
 		print("\nREPLY: ", reply)
@@ -69,7 +63,16 @@ def on_message(client, userdata, msg):
 def on_scheduled(intent, command):
 	print("running scheduled job: ", intent, command)
 	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "' + intent + '"}, "slots": []}'))
+	handle_reply(reply, reply.override_silent)
+
+def handle_reply(reply, do_vocal_reply):
 	if reply:
+		if do_vocal_reply:
+			speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
+			if reply.neopixel_color:
+				neopixel.send_rgb_command(*reply.neopixel_color)
+			if reply.tts_reply and reply.tts_reply != '':
+				client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
 		publish(reply)
 
 zig_receiver_states = {}
@@ -84,8 +87,6 @@ def publish(reply):
 					zig_receiver_states[reply.mqtt_topic[i]] = reply.mqtt_payload[i]
 			elif reply.mqtt_topic[i] in zig_receiver_states:
 				client.publish(reply.mqtt_topic[i], zig_receiver_states[reply.mqtt_topic[i]])
-				
-
 
 def handle_message(client, topic, payload):
 
