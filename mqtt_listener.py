@@ -82,8 +82,9 @@ def publish(reply):
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
 			if reply.mqtt_payload[i] != "<restore>":
-				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
-				if reply.override_state:
+				if reply.prio_state:
+					client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
+				else:
 					zig_receiver_states[reply.mqtt_topic[i]] = reply.mqtt_payload[i]
 			elif reply.mqtt_topic[i] in zig_receiver_states:
 				client.publish(reply.mqtt_topic[i], zig_receiver_states[reply.mqtt_topic[i]])

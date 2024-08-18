@@ -15,21 +15,22 @@ class Zigbee(Receiver):
                 reply_topic.append('z2mq/' + source + '/set')
                 reply_payload.append('{"state":"' + intent.slots["state"] + '",' + settings["ReceiverProperties"][source][mode] + '}')
         
-        override_state = True
+        prio_state = False
         if intent.intent == "VRMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
             reply_payload = ['{"state":"off"}','{"state":"on","brightness":100,"color_mode":"xy","color":{"x":0.1459,"y":0.2382}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
-            override_state = False
+            prio_state = True
         if intent.intent == "CineMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set']
             reply_payload = ['{"state":"on",' + settings["ReceiverProperties"]["couchlamp"]["min"] + '}','{"state":"off"}']
-            override_state = False
+            prio_state = True
         if intent.intent == "StealthMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set']
             reply_payload = ['{"state":"off"}','{"state":"off"}']
-            override_state = False
+            prio_state = True
         if intent.intent == "RLMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
             reply_payload = ['<restore>','<restore>','{"state":"off"}','{"state":"off"}','{"state":"off"}']
+            prio_state = True
             
-        return Reply(glados_path=Receiver.get_reply_from_settings(intent, settings), mqtt_topic= reply_topic, mqtt_payload= reply_payload, override_state= override_state)
+        return Reply(glados_path=Receiver.get_reply_from_settings(intent, settings), mqtt_topic= reply_topic, mqtt_payload= reply_payload, prio_state= prio_state)

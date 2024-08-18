@@ -13,6 +13,8 @@ if not ser.isOpen():
     ser.open()
 
 print("arduino is up an running!")
+send_rgb_command(0b00000000, 0, 0, 0, 0, 0)
+time.sleep(0.1)
 send_rgb_command(0b00000001, 3, 15, 0, 0, 20)
 time.sleep(0.1)
 send_rgb_command(0b00000010, 3, 15, 0, 0, 20)

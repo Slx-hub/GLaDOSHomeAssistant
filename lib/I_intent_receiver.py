@@ -25,7 +25,7 @@ class Reply:
 	tts_reply: str = ""
 	mqtt_topic: List = field(default_factory=lambda: [])
 	mqtt_payload: List = field(default_factory=lambda: [])
-	override_state: bool = True
+	prio_state: bool = True
 	override_silent: bool = False
 
 class Intent:
