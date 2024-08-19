@@ -75,19 +75,23 @@ def handle_reply(reply, do_vocal_reply):
 				client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
 		publish(reply)
 
-zig_receiver_states = {}
+#last_replies_for_topic = {}
 
 def publish(reply):
-	global zig_receiver_states
+#	global last_replies_for_topic
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
-			if reply.mqtt_payload[i] != "<restore>":
-				if reply.prio_state:
-					client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
-				else:
-					zig_receiver_states[reply.mqtt_topic[i]] = reply.mqtt_payload[i]
-			elif reply.mqtt_topic[i] in zig_receiver_states:
-				client.publish(reply.mqtt_topic[i], zig_receiver_states[reply.mqtt_topic[i]])
+			client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
+#			is_allowed = reply.prio_state or reply.mqtt_topic[i] not in last_replies_for_topic \
+#				or not last_replies_for_topic[reply.mqtt_topic[i]].prio_state
+#			
+#			if reply.mqtt_payload[i] != "<restore>":
+#				if is_allowed:
+#					
+#				else:
+#					last_replies_for_topic[reply.mqtt_topic[i]] = reply
+#			elif reply.mqtt_topic[i] in last_replies_for_topic:
+#				client.publish(reply.mqtt_topic[i], last_replies_for_topic[reply.mqtt_topic[i]].mqtt_payload[i])
 
 def handle_message(client, topic, payload):
 
