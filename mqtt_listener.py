@@ -82,10 +82,10 @@ def publish(reply, is_scheduled):
 	global last_reply_for_topics
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
-			last_reply = last_reply_for_topics[reply.mqtt_topic[i]]
-			if reply.mqtt_payload[i] != "<restore>":
+			last_reply = last_reply_for_topics[reply.mqtt_topic[i]] if reply.mqtt_topic[i] in last_reply_for_topics else None
+			if reply.mqtt_payload[i] == "<restore>":
 				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
-				last_reply_for_topics[reply.mqtt_topic[i]].deny_scheduled = False
+				last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = False)
 				return
 
 			if not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
@@ -93,11 +93,11 @@ def publish(reply, is_scheduled):
 				if not reply.deny_scheduled or last_reply == None:
 					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
 				else:
-					last_reply_for_topics[reply.mqtt_topic[i]].deny_scheduled = reply.deny_scheduled
+					last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = reply.deny_scheduled)
 				return
 			
 			if is_scheduled:
-				last_reply_for_topics[reply.mqtt_topic[i]].payload = reply.mqtt_payload[i]
+				last_reply_for_topics[reply.mqtt_topic[i]]._replace(payload = reply.mqtt_payload[i])
 
 def handle_message(client, topic, payload):
 
