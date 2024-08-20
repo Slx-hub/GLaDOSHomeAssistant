@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import json, yaml
-import contextlib
+from collections import namedtuple
 from multiprocessing import Process
 from time import sleep
 
@@ -55,7 +55,7 @@ def on_message(client, userdata, msg):
 	except:
 		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
 
-	handle_reply(reply, True)
+	handle_reply(reply, True, False)
 
 	if enable_debug:
 		print("\nREPLY: ", reply)
@@ -63,9 +63,9 @@ def on_message(client, userdata, msg):
 def on_scheduled(intent, command):
 	print("running scheduled job: ", intent, command)
 	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "' + intent + '"}, "slots": []}'))
-	handle_reply(reply, reply.override_silent)
+	handle_reply(reply, reply.override_silent, True)
 
-def handle_reply(reply, do_vocal_reply):
+def handle_reply(reply, do_vocal_reply, is_scheduled):
 	if reply:
 		if do_vocal_reply:
 			speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
@@ -73,25 +73,31 @@ def handle_reply(reply, do_vocal_reply):
 				neopixel.send_rgb_command(*reply.neopixel_color)
 			if reply.tts_reply and reply.tts_reply != '':
 				client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
-		publish(reply)
+		publish(reply, is_scheduled)
 
-#last_replies_for_topic = {}
+ReplyHistory = namedtuple('ReplyHistory', ['payload', 'deny_scheduled'])
+last_reply_for_topics = {}
 
-def publish(reply):
-#	global last_replies_for_topic
+def publish(reply, is_scheduled):
+	global last_reply_for_topics
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
-			client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
-#			is_allowed = reply.prio_state or reply.mqtt_topic[i] not in last_replies_for_topic \
-#				or not last_replies_for_topic[reply.mqtt_topic[i]].prio_state
-#			
-#			if reply.mqtt_payload[i] != "<restore>":
-#				if is_allowed:
-#					
-#				else:
-#					last_replies_for_topic[reply.mqtt_topic[i]] = reply
-#			elif reply.mqtt_topic[i] in last_replies_for_topic:
-#				client.publish(reply.mqtt_topic[i], last_replies_for_topic[reply.mqtt_topic[i]].mqtt_payload[i])
+			last_reply = last_reply_for_topics[reply.mqtt_topic[i]]
+			if reply.mqtt_payload[i] != "<restore>":
+				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
+				last_reply_for_topics[reply.mqtt_topic[i]].deny_scheduled = False
+				return
+
+			if not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
+				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
+				if not reply.deny_scheduled or last_reply == None:
+					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
+				else:
+					last_reply_for_topics[reply.mqtt_topic[i]].deny_scheduled = reply.deny_scheduled
+				return
+			
+			if is_scheduled:
+				last_reply_for_topics[reply.mqtt_topic[i]].payload = reply.mqtt_payload[i]
 
 def handle_message(client, topic, payload):
 
