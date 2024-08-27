@@ -89,3 +89,4 @@ SchedulerSettings:
   hourly:
   everyXminutes:
     "10": "HealthCheck>"
+    #"1": "Alias> scheduled_night_light"

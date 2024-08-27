@@ -2,7 +2,7 @@
 import paho.mqtt.client as mqtt
 import json, yaml
 from collections import namedtuple
-from multiprocessing import Process
+from multiprocessing import Process, Manager
 from time import sleep
 
 from lib.I_intent_receiver import Intent
@@ -82,22 +82,26 @@ def publish(reply, is_scheduled):
 	global last_reply_for_topics
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
+			print("REPLY; topic: ", reply.mqtt_topic[i])
 			last_reply = last_reply_for_topics[reply.mqtt_topic[i]] if reply.mqtt_topic[i] in last_reply_for_topics else None
+			print("REPLY; history: ", last_reply)
 			if reply.mqtt_payload[i] == "<restore>":
 				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
-				last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = False)
-				return
+				last_reply_for_topics[reply.mqtt_topic[i]] = last_reply._replace(deny_scheduled = False)
+				print("RESTORE; topic state: ", last_reply_for_topics[reply.mqtt_topic[i]])
+				continue
 
-			if not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
+			if not is_scheduled or last_reply is None or not last_reply.deny_scheduled:
+				print("SANITY CHECK: ", not is_scheduled, last_reply is None, last_reply is not None and not last_reply.deny_scheduled)
 				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
-				if not reply.deny_scheduled or last_reply == None:
+				if not reply.deny_scheduled or last_reply is None:
 					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
 				else:
-					last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = reply.deny_scheduled)
-				return
-			
-			if is_scheduled:
-				last_reply_for_topics[reply.mqtt_topic[i]]._replace(payload = reply.mqtt_payload[i])
+					last_reply_for_topics[reply.mqtt_topic[i]] = last_reply._replace(deny_scheduled = reply.deny_scheduled)
+				print("PUBLISH; topic state: ", last_reply_for_topics[reply.mqtt_topic[i]])
+			else:
+				last_reply_for_topics[reply.mqtt_topic[i]] = last_reply._replace(payload = reply.mqtt_payload[i])
+				print("HIDE; topic state: ", last_reply_for_topics[reply.mqtt_topic[i]])
 
 def handle_message(client, topic, payload):
 
@@ -184,12 +188,21 @@ def load_config():
 		if proc and proc.is_alive():
 			proc.terminate()
 		scheduler.setup(on_scheduled, config_SchedulerSettings)
-		proc = Process(target=scheduler.run)
-		proc.start()
+
+		global last_reply_for_topics
+		with Manager() as manager:
+			last_reply_for_topics = manager.dict()
+			proc = Process(target=scheduler.run)
+			proc.start()
 
 		print('Intent Routing:', config_IntentRouting)
 		print('Handler Settings:', config_HandlerSettings)
 		print('Scheduler Settings:', config_SchedulerSettings)
+
+def setup_process(shared_topic_dict):
+	global last_reply_for_topics
+	last_reply_for_topics = shared_topic_dict
+	scheduler.run()
 
 # Create MQTT client and connect to broker
 
