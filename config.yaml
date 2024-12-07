@@ -75,16 +75,16 @@ HandlerSettings:
 SchedulerSettings:
 
   daily:
-    "20:30": "Alias> scheduled_evening_light"
+    <sunset>: "Alias> scheduled_evening_light"
     "22:00": "Alias> scheduled_night_light"
     "23:00": "Alias> scheduled_light_off"
     "02:00": "Reboot>"
 
-    "07:15": "Alias> scheduled_alarm_low"
-    "07:20": "Alias> scheduled_alarm_medium"
-    "07:25": "Alias> scheduled_alarm_full"
-    "07:30": "Scheduled> scheduled_alarm_ring"
-    "07:35": "Alias> scheduled_alarm_off"
+    "06:45": "Alias> scheduled_alarm_low"
+    "06:50": "Alias> scheduled_alarm_medium"
+    "06:55": "Alias> scheduled_alarm_full"
+    "07:00": "Scheduled> scheduled_alarm_ring"
+    "07:10": "Alias> scheduled_alarm_off"
     
   hourly:
   everyXminutes:

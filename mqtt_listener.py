@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
+import requests
 import json, yaml
+from datetime import datetime
 from collections import namedtuple
 from multiprocessing import Process
 from time import sleep
@@ -86,7 +88,7 @@ def publish(reply, is_scheduled):
 			if reply.mqtt_payload[i] == "<restore>":
 				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
 				last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = False)
-				return
+				continue
 
 			if not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
 				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
@@ -94,7 +96,7 @@ def publish(reply, is_scheduled):
 					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
 				else:
 					last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = reply.deny_scheduled)
-				return
+				continue
 			
 			if is_scheduled:
 				last_reply_for_topics[reply.mqtt_topic[i]]._replace(payload = reply.mqtt_payload[i])
@@ -169,7 +171,8 @@ def load_config():
 	config_HandlerSettings = {}
 	config_GeneralSettings = {}
 	with open("config.yaml", 'r') as stream:
-		yaml_config = yaml.safe_load(stream)
+		yaml_str = set_sun_oriented_fields(stream.read())
+		yaml_config = yaml.safe_load(yaml_str)
 		for receiver in yaml_config['IntentRouting']:
 			for topic in yaml_config['IntentRouting'][receiver]:
 				if topic in config_IntentRouting:
@@ -190,6 +193,27 @@ def load_config():
 		print('Intent Routing:', config_IntentRouting)
 		print('Handler Settings:', config_HandlerSettings)
 		print('Scheduler Settings:', config_SchedulerSettings)
+
+sun_data_keys = ['sunrise','sunset','dawn','dusk','first_light','last_light','solar_noon','golden_hour']
+
+def set_sun_oriented_fields(yaml_str):
+	sun_data = call_sunset_api()
+	for key in sun_data_keys:
+		yaml_str = yaml_str.replace(f'<{key}>', format_time(sun_data[key]))
+	return yaml_str
+
+def call_sunset_api(): 
+	response = requests.get('https://api.sunrisesunset.io/json?lat=48.859631&lng=8.206893') 
+	if response.status_code == 200: 
+		data = response.json() 
+		if data.get("status") == "OK": 
+			return data.get("results")
+	return {"error": "API response is not OK"}
+
+def format_time(time_str): 
+	time_obj = datetime.strptime(time_str, '%I:%M:%S %p') 
+	formatted_time = time_obj.strftime('"%H:%M"')
+	return formatted_time
 
 # Create MQTT client and connect to broker
 
