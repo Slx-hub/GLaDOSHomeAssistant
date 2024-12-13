@@ -19,6 +19,7 @@ from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
 from lib import scheduler
+from lib import intent_randomizer
 
 receivers = {
 	'Conversation': receiver_conversation.Conversation(),
@@ -63,7 +64,14 @@ def on_message(client, userdata, msg):
 		print("\nREPLY: ", reply)
 
 def on_scheduled(intent, command):
-	print("running scheduled job: ", intent, command)
+	print("Running scheduled job: ", intent, command)
+
+	if intent_randomizer.is_random_intent(intent):
+		intent = intent_randomizer.roll_random_intent(intent)
+		if not intent:
+			print("Intent did not beat odds.")
+			return
+
 	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "' + intent + '"}, "slots": []}'))
 	handle_reply(reply, reply.override_silent, True)
 
