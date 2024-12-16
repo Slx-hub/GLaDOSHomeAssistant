@@ -215,7 +215,7 @@ def set_sun_oriented_fields(yaml_str):
 def call_sunset_api(): 
 	try:
 		response = requests.get('https://api.sunrisesunset.io/json?lat=48.859631&lng=8.206893') 
-	except:
+	except Exception as e:
 		return
 	if response.status_code == 200: 
 		data = response.json() 
