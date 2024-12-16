@@ -20,8 +20,8 @@ This section is not a setup guide but rather acts as a reference for when i have
 
 Bash shortcuts:
 - defined in ~/.bashrc
-- rhstart, rhstop, rhrestart -> calls respective docker functions
-- glrestart -> restarts GlaDOS Module
+- rhstart, rhstop, rhrestart -> starts and stops Rhasspy Container
+- glstart, glstop, glrestart -> starts and stops GlaDOS Module
 - glados -> shows active GlaDOS Log
 
 Linux command to convert mp3 to wav:
