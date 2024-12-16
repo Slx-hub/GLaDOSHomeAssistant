@@ -206,6 +206,8 @@ sun_data_keys = ['sunrise','sunset','dawn','dusk','first_light','last_light','so
 
 def set_sun_oriented_fields(yaml_str):
 	sun_data = call_sunset_api()
+	if not sun_data:
+		return yaml_str
 	for key in sun_data_keys:
 		yaml_str = yaml_str.replace(f'<{key}>', format_time(sun_data[key]))
 	return yaml_str
@@ -216,7 +218,7 @@ def call_sunset_api():
 		data = response.json() 
 		if data.get("status") == "OK": 
 			return data.get("results")
-	return {"error": "API response is not OK"}
+	return
 
 def format_time(time_str): 
 	time_obj = datetime.strptime(time_str, '%I:%M:%S %p') 
