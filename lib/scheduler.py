@@ -16,12 +16,12 @@ def setup(callback, settings):
     print("JOBS:", sched.get_jobs())
 
 def sanitize_config_keys(settings):
-    sanitized_map = {}
+    sanitized_keys = {}
     for key in settings.keys():
         if key.startswith('<'):
             continue
-        sanitized_map[re.sub("-\d", "", key)] = settings[key]
-    return sanitized_map.items()
+        sanitized_keys.add((re.sub("-\d", "", key), settings[key]))
+    return sanitized_keys
 
 def schedule(scheduler, callback, config_val):
     elements = config_val.split(">")
