@@ -21,7 +21,7 @@ def sanitize_config_keys(settings):
         if key.startswith('<'):
             continue
         sanitized_map[re.sub("-\d", "", key)] = settings[key]
-    return sanitized_map
+    return sanitized_map.items()
 
 def schedule(scheduler, callback, config_val):
     elements = config_val.split(">")
