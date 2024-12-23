@@ -16,7 +16,7 @@ def setup(callback, settings):
     print("JOBS:", sched.get_jobs())
 
 def sanitize_config_keys(settings):
-    sanitized_keys = {}
+    sanitized_keys = []
     for key in settings.keys():
         if key.startswith('<'):
             continue
