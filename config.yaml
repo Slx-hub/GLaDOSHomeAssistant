@@ -76,8 +76,8 @@ HandlerSettings:
 SchedulerSettings:
 
   daily:
-    <sunset>: "30%-Alias> scheduled_lavalamp_on"
-    <sunset>-1: "Alias> scheduled_evening_light"
+    "<sunset>": "30%-Alias> scheduled_lavalamp_on"
+    "<sunset>-1": "Alias> scheduled_evening_light"
     "22:00": "Alias> scheduled_night_light"
     "23:00": "Alias> scheduled_light_off"
     "23:10": "Alias> scheduled_lavalamp_off"

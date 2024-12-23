@@ -225,7 +225,7 @@ def call_sunset_api():
 
 def format_time(time_str): 
 	time_obj = datetime.strptime(time_str, '%I:%M:%S %p') 
-	formatted_time = time_obj.strftime('"%H:%M"')
+	formatted_time = time_obj.strftime('%H:%M')
 	return formatted_time
 
 # Create MQTT client and connect to broker
