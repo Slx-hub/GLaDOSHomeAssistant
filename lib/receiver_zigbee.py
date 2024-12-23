@@ -4,7 +4,7 @@ class Zigbee(Receiver):
 
     def receive_intent(self, intent, settings):
 
-        if intent.intent == "SwitchSocket":
+        if intent.intent == "ChangeSocketState":
             reply_topic = ['z2mq/' + intent.slots["source"] + '/set']
             reply_payload = ['{"state":"' + intent.slots["state"] + '"}']
 
