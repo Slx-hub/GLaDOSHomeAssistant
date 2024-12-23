@@ -20,7 +20,7 @@ def sanitize_config_keys(settings):
     for key in settings.keys():
         if key.startswith('<'):
             continue
-        sanitized_keys.add((re.sub("-\d", "", key), settings[key]))
+        sanitized_keys.append((re.sub("-\d", "", key), settings[key]))
     return sanitized_keys
 
 def schedule(scheduler, callback, config_val):
