@@ -72,6 +72,7 @@ HandlerSettings:
       "do nothing": "command_success"
       "scheduled_alarm_ring": "special/alarm"
       "scheduled_reminder_pills": "special/reminder/pills.wav"
+      "scheduled_reminder_go_dark": "special/reminder/go_dark"
     
 SchedulerSettings:
 
@@ -79,15 +80,16 @@ SchedulerSettings:
     "<sunset>": "30%-Alias> scheduled_lavalamp_on"
     "<sunset>-1": "Alias> scheduled_evening_light"
     "22:00": "Alias> scheduled_night_light"
+    "22:22": "Scheduled> scheduled_reminder_go_dark"
     "23:00": "Alias> scheduled_light_off"
     "23:10": "Alias> scheduled_lavalamp_off"
     "02:00": "Reboot>"
 
-    "06:45": "Alias> scheduled_alarm_low"
-    "06:50": "Alias> scheduled_alarm_medium"
-    "06:55": "Alias> scheduled_alarm_full"
-    "07:00": "Scheduled> scheduled_alarm_ring"
-    "07:10": "Alias> scheduled_alarm_off"
+    "07:00": "Alias> scheduled_alarm_low"
+    "07:15": "Alias> scheduled_alarm_medium"
+    "07:25": "Alias> scheduled_alarm_full"
+    "07:29": "Scheduled> scheduled_alarm_ring"
+    "07:35": "Alias> scheduled_alarm_off"
     
   hourly:
   everyXminutes:
