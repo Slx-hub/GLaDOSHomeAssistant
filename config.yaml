@@ -23,6 +23,8 @@ IntentRouting:
     - SetTimer
     - RemoveTimer
     - QueryTimer
+  PictureFrame:
+    - PictureFrame
 
 HandlerSettings:
 
@@ -60,6 +62,9 @@ HandlerSettings:
   Sonos:
     default-device: 'Living Room'
     default-volume: 30
+
+  PictureFrame:
+    url: 'http://192.168.178.42'
 
   System:
     ram-threshold: 80.0

@@ -15,6 +15,7 @@ from lib import receiver_system
 from lib import receiver_timer
 from lib import receiver_zigbee
 from lib import receiver_sonos
+from lib import receiver_pictureframe
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
@@ -28,6 +29,7 @@ receivers = {
 	'Timer': receiver_timer.Timer(),
 	'Zigbee': receiver_zigbee.Zigbee(),
 	'Sonos': receiver_sonos.Sonos(),
+	'PictureFrame': receiver_pictureframe.PictureFrame(),
 }
 
 enable_debug = True
