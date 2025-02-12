@@ -57,13 +57,11 @@ def on_message(client, userdata, msg):
 
 	try:
 		reply = handle_message(client, msg.topic, payload)
-	except:
+	except Exception as e:
+		print(e)
 		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
 
 	handle_reply(reply, True, False)
-
-	if enable_debug:
-		print("\nREPLY: ", reply)
 
 def on_scheduled(intent, command):
 	print("Running scheduled job: ", intent, command)
@@ -74,7 +72,7 @@ def on_scheduled(intent, command):
 			print("Intent did not beat odds.")
 			return
 
-	reply = handle_message(client,'',json.loads('{"input": "' + command + '", "intent": {"intentName": "' + intent + '"}, "slots": []}'))
+	reply = handle_message(client,'hermes/intent/' + intent, json.loads('{"input": "' + command + '"}'))
 	handle_reply(reply, reply.override_silent, True)
 
 def handle_reply(reply, do_vocal_reply, is_scheduled):
@@ -127,18 +125,15 @@ def handle_message(client, topic, payload):
 		else:
 			return Reply(glados_path = 'command_unknown')
 
-	if 'intent' not in payload:
-		return Reply(glados_path='command_unknown')
-
 	reply: Reply
-	intent = payload_to_intent(payload)
+	intent = payload_to_intent(topic, payload)
 
 	if intent.intent == "Reload-Config":
 		load_config()
 		return Reply(glados_path='command_success')
 
 	if intent.intent == "Alias":
-		intent = alias_converter.convert_alias(intent, payload['input'])
+		intent = alias_converter.convert_alias(intent)
 
 	if intent.intent not in config_IntentRouting:
 		return Reply(glados_path='command_unknown')
@@ -151,15 +146,25 @@ def handle_message(client, topic, payload):
 	if not reply:
 		return Reply(glados_path='command_unknown')
 	else:
+		if enable_debug:
+			print("\nREPLY: ", reply)
 		return reply
 
-def payload_to_intent(payload):
-	intent = payload["intent"]["intentName"]
+def payload_to_intent(topic, payload):
+	if topic.startswith("hermes/intent/"):
+		intent = topic.rsplit('/', 1)[1]
+	else:
+		intent = payload["intent"]["intentName"]
 	text = payload["input"]
 	slots = {}
-	for slot in payload["slots"]:
-		slots[slot["slotName"]] = slot["value"]["value"]
-	return Intent(intent, slots, text)
+	if "slots" in payload:
+		for slot in payload["slots"]:
+			slots[slot["slotName"]] = slot["value"]["value"]
+
+	intentobj = Intent(intent, slots, text)
+	if enable_debug:
+		print("COMPILED INTENT: ", intentobj)
+	return intentobj
 
 def get_slot_by_entity(json, entity):
 	for slot in json["slots"]:

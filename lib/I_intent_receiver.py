@@ -33,3 +33,6 @@ class Intent:
 		self.intent = intent
 		self.slots = slots
 		self.text = text
+
+	def __str__(self):
+		return f'{{ Intent: {self.intent}, Slots: {self.slots}, Text: {self.text} }}'

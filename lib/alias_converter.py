@@ -12,7 +12,7 @@ dict = {'noodle time': Intent(intent='SetTimer', slots={'amount': 8, 'scale': 'm
         'scheduled_lavalamp_on': Intent(intent='ChangeSocketState', slots={'state': 'on', 'source': 'lavalamp'}),
         'scheduled_lavalamp_off': Intent(intent='ChangeSocketState', slots={'state': 'off', 'source': 'lavalamp'})}
 
-def convert_alias(intent, text):
-    if dict[text]:
-        return dict[text]
+def convert_alias(intent):
+    if dict[intent.text]:
+        return dict[intent.text]
     return intent
