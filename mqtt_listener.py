@@ -209,7 +209,7 @@ def load_config():
 		print('Handler Settings:', config_HandlerSettings)
 		print('Scheduler Settings:', config_SchedulerSettings)
 
-sun_data_keys = ['sunrise','sunset','dawn','dusk','first_light','last_light','solar_noon','golden_hour']
+sun_data_keys = ['sunrise','sunset','dawn','dusk']
 
 def set_sun_oriented_fields(yaml_str):
 	sun_data = call_sunset_api()

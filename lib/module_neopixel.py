@@ -5,7 +5,7 @@ def send_rgb_command(indices, r, g, b, w, deciseconds):
     ser.write(bytes([indices,r,g,b,w,deciseconds]))
 
 ser = serial.Serial(
-    port='/dev/ttyACM0',
+    port='/dev/ttyACM1',
     baudrate=9600
 )
 
