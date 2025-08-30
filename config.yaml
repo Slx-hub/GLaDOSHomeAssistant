@@ -75,7 +75,7 @@ HandlerSettings:
       "ping": "special/conversation/pong.wav"
       "hello there": "special/conversation/kenobi.wav"
       "do nothing": "command_success"
-      "scheduled_alarm_ring": "special/alarm"
+      "scheduled_alarm_ring": "special/alarm/schoenstertag.wav"
       "scheduled_reminder_pills": "special/reminder/pills.wav"
       "scheduled_reminder_go_dark": "special/reminder/go_dark"
     
@@ -93,7 +93,7 @@ SchedulerSettings:
     "07:00": "Alias> scheduled_alarm_low"
     "07:15": "Alias> scheduled_alarm_medium"
     "07:25": "Alias> scheduled_alarm_full"
-    "07:29": "Scheduled> scheduled_alarm_ring"
+    "07:27": "Scheduled> scheduled_alarm_ring"
     "07:35": "Alias> scheduled_alarm_off"
     
   hourly:
