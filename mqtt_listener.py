@@ -237,7 +237,7 @@ def format_time(time_str):
 
 # Create MQTT client and connect to broker
 
-client = mqtt.Client()
+client = mqtt.Client("glados_core")
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.on_message = on_message
