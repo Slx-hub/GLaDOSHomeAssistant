@@ -1,0 +1,17 @@
+meta {
+  name: Text to intent
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://192.168.178.30:12101/api/text-to-intent
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "text": "turn off the livingroom"
+  }
+}
