@@ -1,0 +1,6 @@
+paho-mqtt
+requests
+pyyaml
+flask
+schedule
+soco
