@@ -1,0 +1,27 @@
+meta {
+  name: Handle intent
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://192.168.178.30:12101/api/intent/handle
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "intent": {
+      "name": "ChangeLightState",
+      "confidence": 1.0
+    },
+    "entities": [
+      { "entity": "light_source",
+        "value": "livingroom" },
+      { "entity": "state",
+        "value": "on" }
+    ],
+    "text": "turn on the livingroom"
+  }
+}
