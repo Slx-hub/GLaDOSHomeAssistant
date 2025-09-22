@@ -15,7 +15,6 @@ from lib import receiver_system
 from lib import receiver_timer
 from lib import receiver_zigbee
 from lib import receiver_sonos
-from lib import receiver_pictureframe
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
@@ -29,7 +28,6 @@ receivers = {
 	'Timer': receiver_timer.Timer(),
 	'Zigbee': receiver_zigbee.Zigbee(),
 	'Sonos': receiver_sonos.Sonos(),
-	'PictureFrame': receiver_pictureframe.PictureFrame(),
 }
 
 enable_debug = True
@@ -65,6 +63,10 @@ def on_message(client, userdata, msg):
 
 def on_scheduled(intent, command):
 	print("Running scheduled job: ", intent, command)
+
+	if intent.startswith("hermes"):
+		client.publish(intent, json.dumps({"input": command}))
+		return
 
 	if intent_randomizer.is_random_intent(intent):
 		intent = intent_randomizer.roll_random_intent(intent)

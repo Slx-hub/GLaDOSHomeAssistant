@@ -23,8 +23,6 @@ IntentRouting:
     - SetTimer
     - RemoveTimer
     - QueryTimer
-  PictureFrame:
-    - PictureFrame
 
 HandlerSettings:
 
@@ -63,9 +61,6 @@ HandlerSettings:
     default-device: 'Living Room'
     default-volume: 30
 
-  PictureFrame:
-    url: 'http://192.168.178.42'
-
   System:
     ram-threshold: 80.0
 
@@ -95,6 +90,12 @@ SchedulerSettings:
     "07:25": "Alias> scheduled_alarm_full"
     "07:27": "Scheduled> scheduled_alarm_ring"
     "07:35": "Alias> scheduled_alarm_off"
+
+    "07:30": "hermes/http/PictureFrame> pf_display_image"
+    "11:00": "hermes/http/PictureFrame> pf_display_image"
+    "15:00": "hermes/http/PictureFrame> pf_display_image"
+    "19:00": "hermes/http/PictureFrame> pf_display_image"
+    "23:30": "hermes/http/PictureFrame> pf_clear_display"
     
   hourly:
   everyXminutes:
