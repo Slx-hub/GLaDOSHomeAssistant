@@ -2,6 +2,9 @@
 
 SERVICE_FILE="$(pwd)/setup_files/glados.service"
 
+echo "Installing python dependencies..."
+sh ./install.sh
+
 echo "Linking systemd service..."
 sudo systemctl link "$SERVICE_FILE"
 
@@ -13,8 +16,5 @@ sudo systemctl start glados.service
 
 echo "Setting up aliases..."
 cp ./setup_files/.bash_aliases ..
-
-echo "Installing python dependencies..."
-sh ./install.sh
 
 echo "Done."
