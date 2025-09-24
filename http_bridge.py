@@ -6,6 +6,8 @@ import threading
 import random
 import requests
 
+from lib import picture_frame_util
+
 # --- Flask Setup ---
 app = Flask(__name__)
 
@@ -21,6 +23,17 @@ def slots_to_json(data: dict) -> str:
 @app.route("/picture_frame_display_image")
 def picture_frame_display_image():
     threading.Thread(target=picture_frame_send_image, daemon=True).start()
+    return "OK"
+
+@app.route("/picture_frame_display_info_screen")
+def picture_frame_display_info_screen():
+    threading.Thread(target=picture_frame_send_info_screen, daemon=True).start()
+    return "OK"
+
+
+@app.route("/picture_frame_clear_display")
+def get_picture_frame_clear_display():
+    threading.Thread(target=picture_frame_clear_display, daemon=True).start()
     return "OK"
 
 # Example endpoints
@@ -41,32 +54,31 @@ def custom(message):
 
 #####################################################################################
 
-def picture_frame_send_image():
-    folder = "./lib/pic_frame_images/"
-    files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
-    if not files:
-        print("No images found in", folder)
-        return
-
-    chosen_file = random.choice(files)
-    file_path = os.path.join(folder, chosen_file)
-
-    with open(file_path, "rb") as f:
-        data = f.read()
-
+def picture_frame_send_info_screen():
     try:
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
-            data=data
+            data=picture_frame_util.draw_info_screen()
         )
-        print(f"Posted {chosen_file}, response {resp.status_code}")
+        print(f"Displayed info screen, response {resp.status_code}")
+    except Exception as e:
+        print("Failed to post info screen:", e)
+
+def picture_frame_send_image():
+    try:
+        resp = requests.post(
+            "http://192.168.178.42/image",
+            headers={"Content-Type": "application/octet-stream"},
+            data=picture_frame_util.load_random_glds_image()
+        )
+        print(f"Displayed image, response {resp.status_code}")
     except Exception as e:
         print("Failed to post image:", e)
         
 def picture_frame_clear_display():
     try:
-        resp = requests.get("http://192.168.178.42/clear")
+        resp = requests.get("http://192.168.178.42/clear?color=1")
         print(f"Cleared Display, response {resp.status_code}")
     except Exception as e:
         print("Failed to post image:", e)
@@ -74,6 +86,7 @@ def picture_frame_clear_display():
 # --- dispatch table ---
 actions = {
     "pf_display_image": picture_frame_send_image,
+    "pf_display_info_screen": picture_frame_send_info_screen,
     "pf_clear_display": picture_frame_clear_display,
 }
 
@@ -126,4 +139,4 @@ mqtt_client.loop_start()  # runs network loop in background
 
 # --- Start HTTP server ---
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5123)
+    app.run(debug=True, host="0.0.0.0", port=5123)
