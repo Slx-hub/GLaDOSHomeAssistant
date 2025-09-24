@@ -35,9 +35,10 @@ Turns out i have to do this more often than i would like to, so this time ima wr
 -	`docker save -o ./setup_files/gladosrhasspy.tar gladosrhasspy:latest`
 - copy tar to temporary space
 ?- copy zigbee data to temporary space
-- on the new pie: checkout straight into home, path should be `home/pi/GLaDOSHomeAssistant/`
+- on the new pie: `sudo apt update` and `sudo apt upgrade` cant hurt
+- checkout straight into home, path should be `home/pi/GLaDOSHomeAssistant/`
 - run complete_setup.sh
-- move `gladosrhasspy.tar` from old to new pie
+- move `gladosrhasspy.tar` from temp to new pie
 - run `docker load -i gladosrhasspy.tar`
 - run `docker run -d --name gladosrhasspy gladosrhasspy:latest`
 - checkout <https://github.com/respeaker/seeed-voicecard> into home follow readme
