@@ -32,6 +32,10 @@ def draw_info_screen(data):
     draw = ImageDraw.Draw(img)
     draw.fontmode = "1"
 
+    root_element = data["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
+    warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
+    trip = root_element["trias:TripResponse"]["trias:TripResult"]["trias:Trip"]
+
     parts = [("hello", 0),(" -> ", 4),("world", 0)]
     draw_colored_text(draw, (10,10), parts)
     draw_colored_text(draw, (10,30), parts, 20)

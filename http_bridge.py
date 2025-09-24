@@ -5,6 +5,9 @@ import os
 import threading
 import random
 import requests
+import xmltodict
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 from lib import picture_frame_util
 
@@ -35,7 +38,7 @@ kvv_request = """
 </Trias>
 """
 
-# --- Flask Setup ---
+load_dotenv()
 app = Flask(__name__)
 
 def slots_to_json(data: dict) -> str:
@@ -89,11 +92,14 @@ def picture_frame_send_info_screen():
             headers={"Content-Type": "text/xml"},
             data=fill_variables(kvv_request)
         )
-        print(f"Displayed info screen, response {resp.status_code}")
     except Exception as e:
-        print("Failed to post info screen:", e)
+        print("Failed to request KVV:", e)
+    try:
+        parsed = {"kvv": xmltodict.parse(resp.text)}
+    except Exception as e:
+        print("Failed to parse XML:", e)
     print(f"Received API data")
-    image_bytes = picture_frame_util.draw_info_screen()
+    image_bytes = picture_frame_util.draw_info_screen(parsed)
     print(f"Generated info screen")
     try:
         resp = requests.post(
@@ -105,7 +111,28 @@ def picture_frame_send_info_screen():
     except Exception as e:
         print("Failed to post info screen:", e)
 
-def fill_variables(content):
+def fill_variables(content: str) -> str:
+    # Decide whether to use today or tomorrow
+    now = datetime.now()
+    if now.hour < 8:
+        date_str = now.strftime("%Y-%m-%d")
+    else:
+        tomorrow = now + timedelta(days=1)
+        date_str = tomorrow.strftime("%Y-%m-%d")
+
+    # Get the token securely
+    trias_token = os.getenv("TRIAS_TOKEN")
+    if not trias_token:
+        raise RuntimeError("TRIAS_TOKEN not found in environment variables")
+
+    # Replace placeholders
+    filled = (
+        content
+        .replace("<<today>>", date_str)
+        .replace("<<trias_token>>", trias_token)
+    )
+
+    return filled
 
 
 def picture_frame_send_image():
