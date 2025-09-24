@@ -15,6 +15,6 @@ echo "Setting up aliases..."
 cp ./setup_files/.bash_aliases ..
 
 echo "Installing python dependencies..."
-./install.sh
+sh ./install.sh
 
 echo "Done."
