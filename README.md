@@ -34,16 +34,19 @@ Turns out i have to do this more often than i would like to, so this time ima wr
 - on the old pie: create docker image with `docker commit <container_id_or_name> gladosrhasspy:latest`
 -	`docker save -o ./setup_files/gladosrhasspy.tar gladosrhasspy:latest`
 - copy tar to temporary space
-?- copy zigbee data to temporary space
+?- copy rhasspy stuff to temporary space
 - on the new pie: `sudo apt update` and `sudo apt upgrade` cant hurt
 - checkout straight into home, path should be `home/pi/GLaDOSHomeAssistant/`
 - run complete_setup.sh
 - move `gladosrhasspy.tar` from temp to new pie
+- install docker as instructed <https://docs.docker.com/engine/install/debian>
+?- move rhasspy stuff from temp to new pie
 - run `docker load -i gladosrhasspy.tar`
-- run `docker run -d --name gladosrhasspy gladosrhasspy:latest`
-- checkout <https://github.com/respeaker/seeed-voicecard> into home follow readme
-?- copy zigbee data to `/app/data`
-- run zigbeecontainer as instructed <https://www.zigbee2mqtt.io/guide/installation/02_docker.html>
-- setup usb devices
+- edit `run_docker_containers.sh` to align with <https://www.zigbee2mqtt.io/guide/installation/02_docker.html>
+- execute `run_docker_containers.sh`
+- setup rhasspy as shown in `./setup_files/rhasspy-profile.json` (weirdly enough there is an export but no import)
+- copy rhasspy sentences from `./setup_files/rhasspy-sentences.txt`
+- everything should run now
 
-if it ever becomes relevant, this was the command rhasspy was started with: `bash /usr/lib/rhasspy/bin/rhasspy-voltron --user-profiles /profiles --profile en`
+- !(no longer works, probs too old. voicecard will be removed for now) checkout <https://github.com/respeaker/seeed-voicecard> into home follow readme
+    !might be on the wooden path here, maybe <https://github.com/respeaker/4mics_hat> is the correct thing to do?

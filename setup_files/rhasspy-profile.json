@@ -1,0 +1,36 @@
+{
+    "dialogue": {
+        "system": "hermes"
+    },
+    "intent": {
+        "system": "fsticuffs"
+    },
+    "microphone": {
+        "arecord": {
+            "device": "plughw:CARD=seeed4micvoicec,DEV=0"
+        },
+        "system": "arecord"
+    },
+    "mqtt": {
+        "enabled": "true"
+    },
+    "sounds": {
+        "aplay": {
+            "device": "default:CARD=BR21"
+        },
+        "system": "aplay"
+    },
+    "speech_to_text": {
+        "system": "kaldi"
+    },
+    "text_to_speech": {
+        "system": "nanotts"
+    },
+    "wake": {
+        "porcupine": {
+            "access_key": "kfSf+L24Z6h8gjEb3o7YH2EbJizxQI2NZyprdEmjUuFQZNgNOxz7FA==",
+            "keyword_path": "glados_pi_v2_1_0.ppn"
+        },
+        "system": "porcupine"
+    }
+}

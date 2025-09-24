@@ -1,0 +1,89 @@
+{
+    "0xe0798dfffe7f4646": {
+        "color_mode": "color_temp",
+        "brightness": 100,
+        "state": "ON",
+        "color_temp": 250,
+        "color": {
+            "x": 0.3804,
+            "y": 0.3767,
+            "hue": 40,
+            "saturation": 49
+        },
+        "color_temp_startup": 313,
+        "linkquality": 255,
+        "power_on_behavior": "previous"
+    },
+    "0x84fd27fffecf692d": {
+        "linkquality": 255,
+        "state": "OFF"
+    },
+    "0xbc33acfffe316b0c": {
+        "state": "OFF",
+        "linkquality": 255
+    },
+    "0x0c4314fffe23643f": {
+        "state": "ON",
+        "brightness": 40,
+        "update": {
+            "state": "idle",
+            "installed_version": 50947376,
+            "latest_version": 32
+        },
+        "update_available": false,
+        "linkquality": 255
+    },
+    "0x804b50fffee12994": {
+        "state": "OFF",
+        "linkquality": 255
+    },
+    "0x44fb41feffca4c40": {
+        "state": "OFF"
+    },
+    "0x18fc260000b36cd7": {
+        "state": "OFF",
+        "brightness": 10,
+        "linkquality": 255,
+        "update": {
+            "state": "available",
+            "installed_version": 604050705,
+            "latest_version": 604181777
+        },
+        "update_available": true
+    },
+    "0x18fc260000b3cf9e": {
+        "update": {
+            "state": "available",
+            "installed_version": 604050705,
+            "latest_version": 604181777
+        },
+        "update_available": true,
+        "state": "OFF",
+        "brightness": 10,
+        "linkquality": 255
+    },
+    "0xa4c138f463500d6c": {
+        "state": "OFF",
+        "child_lock": "UNLOCK",
+        "indicator_mode": "off/on",
+        "power_outage_memory": "off",
+        "voltage": 244,
+        "current": 0,
+        "power": 0,
+        "linkquality": 255
+    },
+    "0xa4c1385ac7c28279": {
+        "humidity": 88.16,
+        "temperature": 11.43,
+        "linkquality": 255,
+        "battery": 100,
+        "voltage": 3000
+    },
+    "0xa4c138847116602a": {
+        "temperature": 12.72,
+        "humidity": 83.72,
+        "battery": 100,
+        "voltage": 2900,
+        "linkquality": 255
+    }
+}

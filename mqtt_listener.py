@@ -9,7 +9,6 @@ from time import sleep
 
 from lib.I_intent_receiver import Intent
 from lib.I_intent_receiver import Reply
-from lib import receiver_shield
 from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
@@ -23,7 +22,6 @@ from lib import intent_randomizer
 receivers = {
 	'Conversation': receiver_conversation.Conversation(),
 	'System': receiver_system.System(),
-	'Shield': receiver_shield.Shield(),
 	'Timer': receiver_timer.Timer(),
 	'Zigbee': receiver_zigbee.Zigbee(),
 }

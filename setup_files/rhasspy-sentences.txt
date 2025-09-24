@@ -1,0 +1,72 @@
+[Shutdown]
+shut down
+good night
+
+[Reboot]
+restart
+
+[HealthCheck]
+health check
+
+[Reload-Config]
+reload
+
+[Alias]
+noodle time
+lunch time
+
+[RLMode]
+real life mode
+normal mode
+
+[VRMode]
+we are mode
+
+[CineMode]
+cinema mode
+
+[StealthMode]
+stealth mode
+
+[SetTimer]
+timer_scale = (seconds | minutes | hours | second | minute | hour) {scale}
+( set | make | place ) [a | the] timer [for | at] (1..100){amount} <timer_scale> 
+( set | make | place ) a (1..100){amount} <timer_scale> timer
+
+[RemoveTimer]
+(remove | delete | stop) [the] timer (1..8){index}
+(remove | delete | stop) (all){index} timers
+
+[QueryTimer]
+How much time is left ( ){index:1}
+How much time is left on timer (1..8){index} 
+
+[ChangeSocketState]
+state = (on | off) {state}
+socket_source = (lavalamp) {source}
+turn <state> the <socket_source>
+turn the <socket_source> <state>
+
+[ChangeLightState]
+state = (on | off) {state}
+light_source = (showcase | couchlamp | livingroom | bedlightl | bedlightr | bedroom) {source}
+
+turn <state> the <light_source>
+turn the <light_source> <state>
+(dim){mode} the <light_source> ( ){state:on}
+
+[ChangeLightColor]
+light_color = (red | green | blue | yellow | magenta | cyan | white) {color}
+light_source = (showcase) {source}
+
+set the <light_source> [to] <light_color>
+(make | turn) the <light_source> <light_color>
+
+[Greet]
+hello
+hi | hey
+
+[Conversation]
+ping
+hello there
+do nothing

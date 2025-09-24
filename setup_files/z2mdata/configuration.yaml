@@ -1,0 +1,60 @@
+homeassistant:
+  enabled: false
+frontend:
+  enabled: true
+mqtt:
+  base_topic: z2mq
+  server: mqtt://mosquitto:1883
+  keepalive: 60
+  reject_unauthorized: true
+  version: 4
+serial:
+  port: /dev/ttyACM0
+advanced:
+  network_key:
+    - 109
+    - 90
+    - 44
+    - 171
+    - 148
+    - 5
+    - 148
+    - 106
+    - 211
+    - 203
+    - 186
+    - 213
+    - 173
+    - 128
+    - 182
+    - 60
+  log_level: debug
+devices:
+  '0xe0798dfffe7f4646':
+    friendly_name: showcase
+  '0x84fd27fffecf692d':
+    friendly_name: socketlh1
+  '0xbc33acfffe316b0c':
+    friendly_name: socketlh2
+  '0x0c4314fffe23643f':
+    friendly_name: couchlamp
+  '0x804b50fffee12994':
+    friendly_name: socketvive
+  '0x44fb41feffca4c40':
+    friendly_name: Esp_Turntable_Test
+  '0x18fc260000b36cd7':
+    friendly_name: bedlightl
+  '0x18fc260000b3cf9e':
+    friendly_name: bedlightr
+  '0xa4c138f463500d6c':
+    friendly_name: lavalamp
+  '0xa4c1385ac7c28279':
+    friendly_name: therm_balcony
+  '0xa4c138847116602a':
+    friendly_name: therm_bedroom_window
+  '0xa4c13896e74e6997':
+    friendly_name: '0xa4c13896e74e6997'
+groups:
+  '1':
+    friendly_name: Thermometers
+version: 4
