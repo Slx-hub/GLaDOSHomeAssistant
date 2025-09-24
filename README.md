@@ -2,7 +2,7 @@
 
 This piece of code replaces the Dialog Management, Intent Handling and TTS Module of a [Rhasspy](https://rhasspy.readthedocs.io/en/latest/) Voice Assistant instance.
 
-TTS consists of canned audio samples generated with [15.ai](https://15.ai) (rip), to sound like GlaDOS from Portal.
+TTS consists of canned audio samples generated with [elevenlabs](https://elevenlabs.io), to sound like GlaDOS from Portal.
 
 All the functions it can execute are tailored to my exact needs, so this repo won't be of any use for anyone else.
 
@@ -26,3 +26,23 @@ Bash shortcuts:
 
 Linux command to convert mp3 to wav:
 ```for i in *.mp3; do ffmpeg -i "$i" "${i%.*}.wav"; done ```
+
+## How to migrate
+
+Turns out i have to do this more often than i would like to, so this time ima write down all the steps while im at it
+
+- on the old pie: create docker image with `docker commit <container_id_or_name> gladosrhasspy:latest`
+-	`docker save -o ./setup_files/gladosrhasspy.tar gladosrhasspy:latest`
+- copy tar to temporary space
+?- copy zigbee data to temporary space
+- on the new pie: checkout straight into home, path should be `home/pi/GLaDOSHomeAssistant/`
+- run complete_setup.sh
+- move `gladosrhasspy.tar` from old to new pie
+- run `docker load -i gladosrhasspy.tar`
+- run `docker run -d --name gladosrhasspy gladosrhasspy:latest`
+- checkout <https://github.com/respeaker/seeed-voicecard> into home follow readme
+?- copy zigbee data to `/app/data`
+- run zigbeecontainer as instructed <https://www.zigbee2mqtt.io/guide/installation/02_docker.html>
+- setup usb devices
+
+if it ever becomes relevant, this was the command rhasspy was started with: `bash /usr/lib/rhasspy/bin/rhasspy-voltron --user-profiles /profiles --profile en`

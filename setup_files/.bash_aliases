@@ -1,0 +1,7 @@
+alias rhstart='docker start gladosrhasspy'
+alias rhstop='docker stop gladosrhasspy'
+alias rhrestart='docker restart gladosrhasspy'
+alias glstart='sudo sytemctl start glados.service'
+alias glrestart='sudo systemctl restart glados.service'
+alias glstop='sudo systemctl stop glados.service'
+alias glados='journalctl -u glados.service -f'

@@ -1,0 +1,14 @@
+[Unit]
+Description=Glados Python Script
+After=multi-user.target
+StartLimitBurst=1
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3.7 /home/pi/GLaDOSHomeAssistant/mqtt_listener.py
+User=pi
+WorkingDirectory=/home/pi/GLaDOSHomeAssistant/
+
+[Install]
+WantedBy=multi-user.target
