@@ -14,15 +14,14 @@ body:xml {
   <?xml version="1.0" encoding="UTF-8"?>
   <Trias version="1.1" xmlns="http://www.vdv.de/trias" xmlns:siri="http://www.siri.org.uk/siri" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.vdv.de/trias file:///C:/development/HEAD/extras/TRIAS/TRIAS_1.1/Trias.xsd">
       <ServiceRequest>
-          <siri:RequestTimeStamp>2025-09-24T08:44:40</siri:RequestTimeStamp>
-          <siri:RequestorRef>B4s5P6yLsiLY</siri:RequestorRef>
+          <siri:RequestorRef>{{trias_token}}</siri:RequestorRef>
           <RequestPayload>
               <TripRequest>
                   <Origin>
                       <LocationRef>
                           <StopPlaceRef>de:08212:7</StopPlaceRef>
                       </LocationRef>
-                      <DepArrTime>2025-09-24T08:00:00</DepArrTime>
+                      <DepArrTime>2025-09-24T20:35:00</DepArrTime>
                   </Origin>
                   <Destination>
                       <LocationRef>
@@ -30,12 +29,7 @@ body:xml {
                       </LocationRef>
                   </Destination>
                   <Params>
-                      <NumberOfResults>10</NumberOfResults>
-                      <IncludeTrackSections>false</IncludeTrackSections>
-                      <IncludeLegProjection>false</IncludeLegProjection>
-                      <IncludeIntermediateStops>false</IncludeIntermediateStops>
-                      <IncludeOperatingDays>false</IncludeOperatingDays>
-                      <IncludeFares>true</IncludeFares>
+                      <NumberOfResults>3</NumberOfResults>
                   </Params>
               </TripRequest>
           </RequestPayload>
