@@ -57,10 +57,6 @@ HandlerSettings:
       "CineMode": "special/lighting/cinema"
       "RLMode": "special/lighting/rl"
 
-  Sonos:
-    default-device: 'Living Room'
-    default-volume: 30
-
   System:
     ram-threshold: 80.0
 
