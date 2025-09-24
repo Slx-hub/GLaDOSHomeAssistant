@@ -8,6 +8,33 @@ import requests
 
 from lib import picture_frame_util
 
+kvv_request = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Trias version="1.1" xmlns="http://www.vdv.de/trias" xmlns:siri="http://www.siri.org.uk/siri" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.vdv.de/trias file:///C:/development/HEAD/extras/TRIAS/TRIAS_1.1/Trias.xsd">
+    <ServiceRequest>
+        <siri:RequestorRef><<trias_token>></siri:RequestorRef>
+        <RequestPayload>
+            <TripRequest>
+                <Origin>
+                    <LocationRef>
+                        <StopPlaceRef>de:08216:1844</StopPlaceRef>
+                    </LocationRef>
+                    <DepArrTime><<date>>T08:00:00</DepArrTime>
+                </Origin>
+                <Destination>
+                    <LocationRef>
+                        <StopPlaceRef>de:08212:403</StopPlaceRef>
+                    </LocationRef>
+                </Destination>
+                <Params>
+                    <NumberOfResults>3</NumberOfResults>
+                </Params>
+            </TripRequest>
+        </RequestPayload>
+    </ServiceRequest>
+</Trias>
+"""
+
 # --- Flask Setup ---
 app = Flask(__name__)
 
@@ -55,15 +82,31 @@ def custom(message):
 #####################################################################################
 
 def picture_frame_send_info_screen():
+
     try:
         resp = requests.post(
-            "http://192.168.178.42/image",
-            headers={"Content-Type": "application/octet-stream"},
-            data=picture_frame_util.draw_info_screen()
+            "https://projekte.kvv-efa.de/schneidertrias/trias",
+            headers={"Content-Type": "text/xml"},
+            data=fill_variables(kvv_request)
         )
         print(f"Displayed info screen, response {resp.status_code}")
     except Exception as e:
         print("Failed to post info screen:", e)
+    print(f"Received API data")
+    image_bytes = picture_frame_util.draw_info_screen()
+    print(f"Generated info screen")
+    try:
+        resp = requests.post(
+            "http://192.168.178.42/image",
+            headers={"Content-Type": "application/octet-stream"},
+            data=image_bytes
+        )
+        print(f"Displayed info screen, response {resp.status_code}")
+    except Exception as e:
+        print("Failed to post info screen:", e)
+
+def fill_variables(content):
+
 
 def picture_frame_send_image():
     try:

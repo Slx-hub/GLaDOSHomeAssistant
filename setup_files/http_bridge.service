@@ -1,0 +1,14 @@
+[Unit]
+Description=Glados Python Script
+After=multi-user.target
+StartLimitBurst=1
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=python /home/pi/GLaDOSHomeAssistant/http_bridge.py
+User=pi
+WorkingDirectory=/home/pi/GLaDOSHomeAssistant/
+
+[Install]
+WantedBy=multi-user.target

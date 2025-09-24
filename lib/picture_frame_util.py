@@ -2,9 +2,9 @@ import os
 import random
 from PIL import Image, ImageDraw, ImageFont
 
-########################
+##############################
 ## GLDS FILES
-########################
+##############################
 
 def load_random_glds_image():
     folder = "./lib/pic_frame_images/"
@@ -19,17 +19,18 @@ def load_random_glds_image():
     with open(file_path, "rb") as f:
         return f.read()
 
-########################
+##############################
 ## IMAGE RENDERING
-########################
+##############################
 
-#                  0 Black      1 White      2 Green      3 Blue       4 Red        5 Yellow     6 Orange
+#                  0 Black    1 White    2 Green    3 Blue     4 Red      5 Yellow   6 Orange
 palette_colors = ["#282828", "#E5E5E5", "#527743", "#545CCE", "#A04E4E", "#FFFF47", "#A8663A"]
 
-def draw_info_screen():
+def draw_info_screen(data):
     # Create blank image
     img = Image.new("RGB", (800, 480), palette_colors[1])
     draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"
 
     parts = [("hello", 0),(" -> ", 4),("world", 0)]
     draw_colored_text(draw, (10,10), parts)
@@ -39,17 +40,16 @@ def draw_info_screen():
     return image_to_glds_bytes(img)
 
 def draw_colored_text(draw, origin, parts, fontsize = 10):
-    font = ImageFont.truetype("NotoSans-Regular.ttf",10)
     x = origin[0]
     y = origin[1]
     for text, color in parts:
-        draw.text((x, y), text, font=font, fill=palette_colors[color])
+        draw.text((x, y), text, font_size=fontsize, fill=palette_colors[color])
         # Measure width of this piece to offset the next
-        x += draw.textlength(text, font=font)
+        x += draw.textlength(text, font_size=fontsize)
 
-########################
+##############################
 ## RAW IMAGE TO GLDS FORMAT
-########################
+##############################
 
 def file_to_glds_bytes(file_path):
     return image_to_glds_bytes(Image.open(file_path).convert('RGB'))
