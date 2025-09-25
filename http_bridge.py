@@ -22,7 +22,7 @@ kvv_request = """
                     <LocationRef>
                         <StopPlaceRef>de:08216:1844</StopPlaceRef>
                     </LocationRef>
-                    <DepArrTime><<date>>T08:00:00</DepArrTime>
+                    <DepArrTime><<date>>T14:30:00</DepArrTime>
                 </Origin>
                 <Destination>
                     <LocationRef>
@@ -112,14 +112,6 @@ def picture_frame_send_info_screen():
         print("Failed to post info screen:", e)
 
 def fill_variables(content: str) -> str:
-    # Decide whether to use today or tomorrow
-    now = datetime.now()
-    if now.hour < 8:
-        date_str = now.strftime("%Y-%m-%d")
-    else:
-        tomorrow = now + timedelta(days=1)
-        date_str = tomorrow.strftime("%Y-%m-%d")
-
     # Get the token securely
     trias_token = os.getenv("TRIAS_TOKEN")
     if not trias_token:
@@ -128,7 +120,7 @@ def fill_variables(content: str) -> str:
     # Replace placeholders
     filled = (
         content
-        .replace("<<today>>", date_str)
+        .replace("<<date>>", datetime.now().strftime("%Y-%m-%d"))
         .replace("<<trias_token>>", trias_token)
     )
 

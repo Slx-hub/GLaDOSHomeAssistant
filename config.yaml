@@ -87,10 +87,10 @@ SchedulerSettings:
     "07:27": "Scheduled> scheduled_alarm_ring"
     "07:35": "Alias> scheduled_alarm_off"
 
-    "07:30": "hermes/http/PictureFrame> pf_display_image"
-    "11:00": "hermes/http/PictureFrame> pf_display_image"
-    "15:00": "hermes/http/PictureFrame> pf_display_image"
-    "19:00": "hermes/http/PictureFrame> pf_display_image"
+    "07:32": "hermes/http/PictureFrame> pf_display_info_screen"
+    "07:54": "hermes/http/PictureFrame> pf_display_info_screen"
+    "08:30": "hermes/http/PictureFrame> pf_display_image"
+    "15:30": "hermes/http/PictureFrame> pf_display_image"
     "23:30": "hermes/http/PictureFrame> pf_clear_display"
     
   hourly:

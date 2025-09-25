@@ -1,5 +1,6 @@
 import os
 import random
+from lib import kvv_response_parser
 from PIL import Image, ImageDraw, ImageFont
 
 ##############################
@@ -32,18 +33,31 @@ def draw_info_screen(data):
     draw = ImageDraw.Draw(img)
     draw.fontmode = "1"
 
-    root_element = data["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
-    warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
-    trip = root_element["trias:TripResponse"]["trias:TripResult"]["trias:Trip"]
+    # Header
+    draw.text((20, 10), "KVV", font_size=30, fill=palette_colors[4])
+    draw.line([(10, 46),(400,46)], width=4, fill=palette_colors[0])
+    y_cursor = 55
 
-    parts = [("hello", 0),(" -> ", 4),("world", 0)]
-    draw_colored_text(draw, (10,10), parts)
-    draw_colored_text(draw, (10,30), parts, 20)
-    draw_colored_text(draw, (10,60), parts, 30)
+    if not kvv_response_parser.validate_kvv_response(data, draw):
+        return img
+
+    root_element = data["kvv"]["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
+    warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
+    trips = root_element["trias:TripResponse"]["trias:TripResult"]
+
+    if warnings.get("trias:PtSituation" is not None):
+        warning = warnings["trias:PtSituation"]
+        draw.text((20, y_cursor), "<! {0}> {1}".format(warning["siri:Description"],warning["siri:Summary"]), font_size=20, fill=palette_colors[4])
+        y_cursor += 25
+
+    for trip in trips:
+        text_parts = kvv_response_parser.format_trip_for_display(trip)
+        draw_colored_text(draw, (20,y_cursor), text_parts)
+        y_cursor += 25
 
     return image_to_glds_bytes(img)
 
-def draw_colored_text(draw, origin, parts, fontsize = 10):
+def draw_colored_text(draw, origin, parts, fontsize = 20):
     x = origin[0]
     y = origin[1]
     for text, color in parts:
