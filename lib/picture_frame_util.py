@@ -35,7 +35,7 @@ def draw_info_screen(data):
 
     # Header
     draw.text((20, 10), "KVV", font_size=30, fill=palette_colors[4])
-    draw.line([(10, 46),(400,46)], width=4, fill=palette_colors[0])
+    draw.line([(10, 46),(790,46)], width=4, fill=palette_colors[0])
     y_cursor = 55
 
     if not kvv_response_parser.validate_kvv_response(data, draw):
@@ -52,7 +52,7 @@ def draw_info_screen(data):
 
     for trip in trips:
         text_parts = kvv_response_parser.format_trip_for_display(trip)
-        draw_colored_text(draw, (20,y_cursor), text_parts)
+        draw_colored_text(draw, (20,y_cursor), text_parts, 18)
         y_cursor += 25
 
     return image_to_glds_bytes(img)

@@ -22,7 +22,7 @@ kvv_request = """
                     <LocationRef>
                         <StopPlaceRef>de:08216:1844</StopPlaceRef>
                     </LocationRef>
-                    <DepArrTime><<date>>T14:30:00</DepArrTime>
+                    <DepArrTime><<date>>T08:00:00</DepArrTime>
                 </Origin>
                 <Destination>
                     <LocationRef>
@@ -30,7 +30,10 @@ kvv_request = """
                     </LocationRef>
                 </Destination>
                 <Params>
-                    <NumberOfResults>3</NumberOfResults>
+                    <NumberOfResultsGroup>
+                      <NumberOfResultsBefore>0</NumberOfResultsBefore>
+                      <NumberOfResultsAfter>3</NumberOfResultsAfter>
+                    </NumberOfResultsGroup>
                 </Params>
             </TripRequest>
         </RequestPayload>
@@ -201,4 +204,4 @@ mqtt_client.loop_start()  # runs network loop in background
 
 # --- Start HTTP server ---
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5123)
+    app.run(host="0.0.0.0", port=5123)

@@ -116,13 +116,6 @@ def _format_time_local(dt_aware: Optional[datetime], tz_name: str = "Europe/Berl
     return local.strftime("%H:%M")
 
 def format_trip_for_display(trip_wrapper: Dict[str, Any], tz_name: str = "Europe/Berlin") -> List[Tuple[str, int]]:
-    """
-    Accepts either:
-      - a dict like {"trias:Trip": { ... }} or
-      - the dict representing the inner trias:Trip object
-    Returns a list of tuples [(str, color_int), ...] as described.
-    """
-    # normalize to inner trip object
     if "trias:Trip" in trip_wrapper and isinstance(trip_wrapper["trias:Trip"], dict):
         trip_obj = trip_wrapper["trias:Trip"]
     else:
@@ -132,37 +125,52 @@ def format_trip_for_display(trip_wrapper: Dict[str, Any], tz_name: str = "Europe
     if legs_raw is None:
         return [("No trip legs", 4)]
 
-    # normalize legs to list
-    if isinstance(legs_raw, dict):
-        legs = [legs_raw]
-    elif isinstance(legs_raw, list):
-        legs = legs_raw
-    else:
-        return [("Unexpected leg structure", 4)]
-
-    # Build a simplified sequence of leg infos
+    legs = legs_raw if isinstance(legs_raw, list) else [legs_raw]
     leg_infos = []
+
     for leg in legs:
         if "trias:TimedLeg" in leg:
             tl = leg["trias:TimedLeg"]
-            board_time_s = _get_in(tl, ["trias:LegBoard", "trias:ServiceDeparture", "trias:TimetabledTime"])
-            alight_time_s = _get_in(tl, ["trias:LegAlight", "trias:ServiceArrival", "trias:TimetabledTime"])
+
+            # board/alight times with estimates
+            board_dep = tl.get("trias:LegBoard", {}).get("trias:ServiceDeparture", {})
+            alight_arr = tl.get("trias:LegAlight", {}).get("trias:ServiceArrival", {})
+
+            board_time_tt = board_dep.get("trias:TimetabledTime")
+            board_time_est = board_dep.get("trias:EstimatedTime")
+            alight_time_tt = alight_arr.get("trias:TimetabledTime")
+            alight_time_est = alight_arr.get("trias:EstimatedTime")
+
+            board_time_utc = _parse_iso_time_to_aware(board_time_tt)
+            alight_time_utc = _parse_iso_time_to_aware(alight_time_tt)
+            board_time_eff = _parse_iso_time_to_aware(board_time_est) or board_time_utc
+            alight_time_eff = _parse_iso_time_to_aware(alight_time_est) or alight_time_utc
+
+            # bays (estimated overrides planned)
+            bay_text = _first_text(tl.get("trias:LegBoard", {}).get("trias:EstimatedBay")) \
+                       or _first_text(tl.get("trias:LegBoard", {}).get("trias:PlannedBay"))
+            if bay_text and bay_text.lower().startswith("gleis "):
+                bay_text = bay_text[6:]
+
             board_name = _first_text(_get_in(tl, ["trias:LegBoard", "trias:StopPointName"]))
-            alight_name = _first_text(_get_in(tl, ["trias:LegAlight", "trias:StopPointName"]))
             line_name = _first_text(_get_in(tl, ["trias:Service", "trias:PublishedLineName"])) \
                         or _first_text(_get_in(tl, ["trias:Service", "trias:Mode", "trias:Name"]))
+
             leg_infos.append({
                 "type": "timed",
-                "board_time_utc": _parse_iso_time_to_aware(board_time_s),
-                "alight_time_utc": _parse_iso_time_to_aware(alight_time_s),
                 "board_name": board_name,
-                "alight_name": alight_name,
-                "line": (line_name or "").strip()
+                "bay": bay_text,
+                "line": line_name,
+                "has_estimates": board_dep.get("trias:EstimatedTime") is not None,
+                "board_time_tt": board_time_utc,
+                "board_time_eff": board_time_eff,
+                "alight_time_tt": alight_time_utc,
+                "alight_time_eff": alight_time_eff
             })
+
         elif "trias:InterchangeLeg" in leg:
             il = leg["trias:InterchangeLeg"]
             dur = il.get("trias:Duration") or il.get("trias:WalkDuration")
-            # also allow TimeWindowStart/End to be used if present
             tstart = il.get("trias:TimeWindowStart")
             tend = il.get("trias:TimeWindowEnd")
             leg_infos.append({
@@ -173,87 +181,61 @@ def format_trip_for_display(trip_wrapper: Dict[str, Any], tz_name: str = "Europe
                 "end_utc": _parse_iso_time_to_aware(tend),
             })
         else:
-            # unknown leg type, skip but keep placeholder
             leg_infos.append({"type": "unknown"})
 
-    # find indices of timed legs
-    timed_indices = [i for i, li in enumerate(leg_infos) if li.get("type") == "timed"]
+    timed_indices = [i for i, li in enumerate(leg_infos) if li["type"] == "timed"]
     if not timed_indices:
-        return [("No timed legs found", 4)]
+        return [("No timed legs", 4)]
 
-    # start result with first timed board time (local)
-    first_idx = timed_indices[0]
-    first_leg = leg_infos[first_idx]
-    first_board_local = _format_time_local(first_leg.get("board_time_utc"), tz_name)
-    result: List[Tuple[str, int]] = []
-    if first_board_local:
-        result.append((first_board_local, 2))
-    else:
-        result.append(("??:??", 2))
+    result = []
 
-    # Helper to find next timed index after i
-    def _next_timed_index(after_index: int) -> Optional[int]:
-        for k in timed_indices:
-            if k > after_index:
-                return k
-        return None
+    def format_time(tt: datetime, eff: datetime, has_est: bool) -> Tuple[str, int]:
+        tt_s, eff_s = _format_time_local(tt, tz_name), _format_time_local(eff, tz_name)
+        diff_min = int(round((eff - tt).total_seconds() / 60.0)) if (tt and eff) else 0
+        txt = eff_s if eff_s else "??:??"
+        if has_est and eff and tt:
+            txt += f"({diff_min:+d})"
+        color = 4 if diff_min >= 5 else 2
+        return (txt, color)
 
-    # Iterate over each timed leg in sequence and append the requested tuples
-    for ti_idx in timed_indices:
-        leg = leg_infos[ti_idx]
-        # arrow  >  line  >  arrow  >  alight stop
-        result.append((" > ", 3))
-        result.append(((leg.get("line") or ""), 6))
-        result.append((" > ", 3))
+    for idx, ti in enumerate(timed_indices):
+        leg = leg_infos[ti]
 
-        # use alight_name trimmed to 5 chars
-        alight_name = leg.get("alight_name") or leg.get("board_name") or ""
-        alight_trim = (alight_name.strip()[:5]) if alight_name else ""
-        result.append((alight_trim, 0))
+        if idx == 0:
+            # board time
+            result.append(format_time(leg["board_time_tt"], leg["board_time_eff"], leg["has_estimates"]))
+        result.append(("-", 3))
 
-        # determine what's next: either final alight time or changeover minutes to next timed board
-        next_ti = _next_timed_index(ti_idx)
-        if next_ti is None:
-            # last timed leg: append its alight time formatted
-            final_alight_local = _format_time_local(leg.get("alight_time_utc"), tz_name)
-            result.append((" > ", 3))
-            result.append((final_alight_local or "??:??", 2))
+        # board stop + bay
+        board_trim = (leg["board_name"] or "")[:7]
+        result.append((board_trim, 0))
+        if leg["bay"]:
+            result.append((f"||{leg['bay']}", 3))
+
+        # line
+        result.append((" >", 3))
+        result.append(((leg["line"] or ""), 6))
+
+
+        result.append(("> ", 3))
+        # if last leg: add arrival time
+        if idx == len(timed_indices) - 1:
+            result.append(format_time(leg["alight_time_tt"], leg["alight_time_eff"], leg["has_estimates"]))
         else:
-            # there is a following timed leg. Check if there is an interchange between current and next
-            # scan leg_infos between ti_idx and next_ti for an interchange with duration
-            change_min = None
-            for mid in range(ti_idx + 1, next_ti):
-                mid_leg = leg_infos[mid]
-                if mid_leg.get("type") == "interchange":
-                    # prefer explicit duration if present
-                    if mid_leg.get("duration_min") is not None:
-                        change_min = mid_leg["duration_min"]
-                        break
-                    # otherwise, if start/end times are present use them
-                    if mid_leg.get("start_utc") and mid_leg.get("end_utc"):
-                        delta = mid_leg["end_utc"] - mid_leg["start_utc"]
-                        change_min = int(round(delta.total_seconds() / 60.0))
-                        break
-            # if no explicit interchange duration, compute difference between next board and current alight
-            if change_min is None:
-                cur_alight_utc = leg.get("alight_time_utc")
-                next_board_utc = leg_infos[next_ti].get("board_time_utc")
-                if cur_alight_utc and next_board_utc:
-                    # compute minutes (could be negative in malformed data — clamp to 0)
-                    delta_min = int(round((next_board_utc - cur_alight_utc).total_seconds() / 60.0))
-                    change_min = max(0, delta_min)
-                else:
-                    change_min = None
+            # compute changeover
+            cur_eff = leg["alight_time_eff"]
+            cur_tt = leg["alight_time_tt"]
+            nxt = leg_infos[timed_indices[idx + 1]]
+            nxt_eff, nxt_tt = nxt["board_time_eff"], nxt["board_time_tt"]
+            any_est = leg["has_estimates"] or nxt["has_estimates"]
 
-            # append change string
-            result.append((" > ", 3))
-            if change_min is None:
-                # fallback to showing next board time if we can't compute minutes
-                next_board_local = _format_time_local(leg_infos[next_ti].get("board_time_utc"), tz_name)
-                result.append((next_board_local or "??:??", 2))
-            else:
-                result.append((f"{change_min} min", 2))
+            dur_eff = int(round((nxt_eff - cur_eff).total_seconds() / 60.0))
+            dur_tt = int(round((nxt_tt - cur_tt).total_seconds() / 60.0))
+            diff = dur_eff - dur_tt
 
-            # after adding a change entry, loop continues; next timed leg will again append  >  line  >  ...
-            # so visually you'll get: ... (alight)  >  (X min)  >  (line of next leg) ...
+            txt = f"{dur_eff}m" + (f"({diff:+d})" if any_est else "")
+            color = 4 if dur_eff < 5 else 2
+
+            result.append((txt, color))
+
     return result
