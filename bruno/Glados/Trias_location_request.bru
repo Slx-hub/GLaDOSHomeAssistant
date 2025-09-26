@@ -1,0 +1,27 @@
+meta {
+  name: Trias_location_request
+  type: http
+  seq: 11
+}
+
+post {
+  url: https://projekte.kvv-efa.de/schneidertrias/trias
+  body: xml
+  auth: none
+}
+
+body:xml {
+  <?xml version="1.0" encoding="UTF-8"?>
+  <Trias version="1.1" xmlns="http://www.vdv.de/trias" xmlns:siri="http://www.siri.org.uk/siri" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.vdv.de/trias file:///C:/development/HEAD/extras/TRIAS/TRIAS_1.1/Trias.xsd">
+      <ServiceRequest>
+          <siri:RequestorRef>{{trias_token}}</siri:RequestorRef>
+          <RequestPayload>
+              <LocationInformationRequest>
+                <InitialInput>
+                  <LocationName>Hauptbahnhof, Karlsruhe</LocationName>
+                </InitialInput>
+              </LocationInformationRequest>
+          </RequestPayload>
+      </ServiceRequest>
+  </Trias>
+}
