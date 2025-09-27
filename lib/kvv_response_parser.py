@@ -8,21 +8,19 @@ def validate_kvv_response(data, draw):
     error = ""
     if "kvv" not in data or not data["kvv"]:
         error = "No KVV response received."
+    elif isinstance(data["kvv"], str) and data["kvv"].startswith("error:"):
+        if "<body>" in data["kvv"]:
+            data["kvv"] = data["kvv"].split("<body>")[1]
+        error = data["kvv"]
     else:
         try:
             root_element = data["kvv"]["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
-
-            warnings = root_element.get("trias:TripResponse", {}) \
-                                   .get("trias:TripResponseContext", {}) \
-                                   .get("trias:Situations")
 
             trips = root_element.get("trias:TripResponse", {}) \
                                .get("trias:TripResult")
 
             # 2. Validate nodes
-            if warnings is None:
-                error = "Missing warnings section in response."
-            elif trips is None:
+            if trips is None:
                 error = "Missing trip data in response."
             # 3. Validate trip content
             elif isinstance(trips, (list, dict)) and not trips:

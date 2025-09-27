@@ -100,6 +100,7 @@ def picture_frame_send_info_screen():
     try:
         parsed = {"kvv": xmltodict.parse(resp.text)}
     except Exception as e:
+        parsed = {"kvv": f"error: {resp.text}"}
         print("Failed to parse XML:", e)
     print(f"Received API data")
     image_bytes = picture_frame_util.draw_info_screen(parsed)

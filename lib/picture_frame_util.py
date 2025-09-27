@@ -39,13 +39,13 @@ def draw_info_screen(data):
     y_cursor = 55
 
     if not kvv_response_parser.validate_kvv_response(data, draw):
-        return img
+        return image_to_glds_bytes(img)
 
     root_element = data["kvv"]["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
     warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
     trips = root_element["trias:TripResponse"]["trias:TripResult"]
 
-    if warnings.get("trias:PtSituation" is not None):
+    if warnings is not None and warnings.get("trias:PtSituation" is not None):
         warning = warnings["trias:PtSituation"]
         draw.text((20, y_cursor), "<! {0}> {1}".format(warning["siri:Description"],warning["siri:Summary"]), font_size=20, fill=palette_colors[4])
         y_cursor += 25
