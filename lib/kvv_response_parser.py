@@ -36,7 +36,7 @@ def validate_kvv_response(data, draw):
     # If there was an error, display it
     if error:
         print(f"Error: {error}")
-        draw.text((20, 55), f"<!> {error}", font_size=20, fill=palette_colors[4])
+        draw.text((20, 55), f"<!> {error}", font_size=20, fill="#A04E4E")
         return False
     return True
 
