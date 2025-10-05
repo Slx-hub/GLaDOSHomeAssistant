@@ -4,6 +4,15 @@ from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Tuple, Optional
 from PIL import Image, ImageDraw, ImageFont
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 def validate_kvv_response(data, draw):
     error = ""
     if "kvv" not in data or not data["kvv"]:
@@ -33,7 +42,7 @@ def validate_kvv_response(data, draw):
 
     # If there was an error, display it
     if error:
-        print(f"Error: {error}")
+        logger.info("Error: %s" % error)
         draw.text((20, 55), f"<!> {error}", font_size=20, fill="#A04E4E")
         return False
     return True

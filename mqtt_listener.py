@@ -19,6 +19,15 @@ from lib import alias_converter
 from lib import scheduler
 from lib import intent_randomizer
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 receivers = {
 	'Conversation': receiver_conversation.Conversation(),
 	'System': receiver_system.System(),
@@ -26,7 +35,7 @@ receivers = {
 	'Zigbee': receiver_zigbee.Zigbee(),
 }
 
-enable_debug = True
+enable_debug = False
 
 def on_connect(client, userdata, flags, rc):
 	"""Called when connected to MQTT broker."""
@@ -34,7 +43,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe("hermes/asr/textCaptured")
 	client.subscribe("hermes/intent/#")
 	client.subscribe("hermes/nlu/intentNotRecognized")
-	print("Connected!!")
+	logger.info("Connected!!")
 
 
 def on_disconnect(client, userdata, flags, rc):
@@ -46,19 +55,19 @@ def on_message(client, userdata, msg):
 	"""Called each time a message is received on a subscribed topic."""
 	payload = json.loads(msg.payload)
 	if enable_debug:
-		print("TOPIC: ", msg.topic)
-		print("PAYLOAD: ", payload)
+		logger.info("TOPIC:  %s" % msg.topic)
+		logger.info("PAYLOAD:  %s" % payload)
 
 	try:
 		reply = handle_message(client, msg.topic, payload)
 	except Exception as e:
-		print(e)
+		logger.info(e)
 		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
 
 	handle_reply(reply, True, False)
 
 def on_scheduled(intent, command):
-	print("Running scheduled job: ", intent, command)
+	logger.info("Running scheduled job:  %s - %s" % (intent, command))
 
 	if intent.startswith("hermes"):
 		client.publish(intent, json.dumps({"input": command}))
@@ -67,7 +76,7 @@ def on_scheduled(intent, command):
 	if intent_randomizer.is_random_intent(intent):
 		intent = intent_randomizer.roll_random_intent(intent)
 		if not intent:
-			print("Intent did not beat odds.")
+			logger.info("Intent did not beat odds.")
 			return
 
 	reply = handle_message(client,'hermes/intent/' + intent, json.loads('{"input": "' + command + '"}'))
@@ -145,7 +154,7 @@ def handle_message(client, topic, payload):
 		return Reply(glados_path='command_unknown')
 	else:
 		if enable_debug:
-			print("\nREPLY: ", reply)
+			logger.info("\nREPLY:  %s" % reply)
 		return reply
 
 def payload_to_intent(topic, payload):
@@ -161,7 +170,7 @@ def payload_to_intent(topic, payload):
 
 	intentobj = Intent(intent, slots, text)
 	if enable_debug:
-		print("COMPILED INTENT: ", intentobj)
+		logger.info("COMPILED INTENT:  %s" % intentobj)
 	return intentobj
 
 def get_slot_by_entity(json, entity):
@@ -176,7 +185,7 @@ config_GeneralSettings = {}
 proc = Process()
 
 def load_config():
-	print("Reloading config file.")
+	logger.info("Reloading config file.")
 	global config_IntentRouting
 	global config_HandlerSettings
 	global config_GeneralSettings
@@ -203,9 +212,9 @@ def load_config():
 		proc = Process(target=scheduler.run)
 		proc.start()
 
-		print('Intent Routing:', config_IntentRouting)
-		print('Handler Settings:', config_HandlerSettings)
-		print('Scheduler Settings:', config_SchedulerSettings)
+		logger.info("Intent Routing: %s" % config_IntentRouting)
+		logger.info("Handler Settings: %s" % config_HandlerSettings)
+		logger.info("Scheduler Settings: %s" % config_SchedulerSettings)
 
 sun_data_keys = ['sunrise','sunset','dawn','dusk']
 
@@ -250,5 +259,5 @@ try:
 	client.loop_forever()
 except KeyboardInterrupt:
 	pass
-print("Stopping...")
+logger.info("Stopping...")
 proc.terminate()

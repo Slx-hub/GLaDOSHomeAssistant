@@ -13,7 +13,6 @@ def setup(callback, settings):
     if settings["everyXminutes"]:
         for key, value in sanitize_config_keys(settings["everyXminutes"]):
             schedule(sched.every(int(key)).minutes, callback, value)
-    print("JOBS:", sched.get_jobs())
 
 def sanitize_config_keys(settings):
     sanitized_keys = []

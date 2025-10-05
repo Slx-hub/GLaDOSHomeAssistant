@@ -7,6 +7,15 @@ from lib.I_intent_receiver import Receiver, Reply
 from lib import module_speaker
 from lib import module_neopixel as neopixel
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 class Timer(Receiver):
 	timer_dict = dict()
 
@@ -54,15 +63,15 @@ class Timer(Receiver):
 		id = generate_timer_id(seconds)
 		self.timer_dict[id] = Process(target=self.init_timer_task, args=(seconds, id,))
 		self.timer_dict[id].start()
-		print("timer set: ", id)
+		logger.info("timer set:  %s" % id)
 
 	def remove_timer(self, id):
 		self.timer_dict[id].terminate()
 		del self.timer_dict[id]
-		print("deleted timer ", id)
+		logger.info("deleted timer  %s" % id)
 
 	def timer_ring(self, id):
-		print("done with timer ", id)
+		logger.info("done with timer  %s" % id)
 		neopixel.send_rgb_command(0b11111111, 5, 0, 0, 0, 50)
 		# i'm really sorry i have to hardcode the soundpack here, i'll take care of that at some point for sure!
 		module_speaker.aplay_given_path("special/timer/ring", "eleven")
@@ -73,9 +82,9 @@ class Timer(Receiver):
 
 def clean_timers(dict):
 	for key in list(dict):
-		print("Cleaning timer " + key + " ?")
+		logger.info("Cleaning timer " + key + " ?")
 		if get_secs_till_done(key) < 0:
-			print("YES!")
+			logger.info("YES!")
 			del dict[key]
 
 def get_secs_till_done(id):

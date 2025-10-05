@@ -3,6 +3,15 @@ import random
 from lib import kvv_response_parser
 from PIL import Image, ImageDraw, ImageFont
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 ##############################
 ## GLDS FILES
 ##############################
@@ -11,7 +20,7 @@ def load_random_glds_image():
     folder = "./lib/pic_frame_images/"
     files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not files:
-        print("No images found in", folder)
+        logger.info("No images found in %s" % folder)
         return
 
     chosen_file = random.choice(files)

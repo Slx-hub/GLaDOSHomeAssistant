@@ -1,5 +1,5 @@
 [Unit]
-Description=Glados Python Script
+Description=Http Bridge to MQTT
 After=multi-user.target
 StartLimitBurst=1
 

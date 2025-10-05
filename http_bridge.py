@@ -41,6 +41,15 @@ kvv_request = """
 </Trias>
 """
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 app = Flask(__name__)
 
@@ -96,24 +105,24 @@ def picture_frame_send_info_screen():
             data=fill_variables(kvv_request)
         )
     except Exception as e:
-        print("Failed to request KVV:", e)
+        logger.info("Failed to request KVV: %s" % e)
     try:
         parsed = {"kvv": xmltodict.parse(resp.text)}
     except Exception as e:
         parsed = {"kvv": f"error: {resp.text}"}
-        print("Failed to parse XML:", e)
-    print(f"Received API data")
+        logger.info("Failed to parse XML: %s" % e)
+    logger.info(f"Received API data")
     image_bytes = picture_frame_util.draw_info_screen(parsed)
-    print(f"Generated info screen")
+    logger.info(f"Generated info screen")
     try:
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
             data=image_bytes
         )
-        print(f"Displayed info screen, response {resp.status_code}")
+        logger.info("Displayed info screen, response %s" % resp.status_code)
     except Exception as e:
-        print("Failed to post info screen:", e)
+        logger.info("Failed to post info screen: %s" % e)
 
 def fill_variables(content: str) -> str:
     # Get the token securely
@@ -138,16 +147,16 @@ def picture_frame_send_image():
             headers={"Content-Type": "application/octet-stream"},
             data=picture_frame_util.load_random_glds_image()
         )
-        print(f"Displayed image, response {resp.status_code}")
+        logger.info("Displayed image, response %s" % resp.status_code)
     except Exception as e:
-        print("Failed to post image:", e)
+        logger.info("Failed to post image: %s" % e)
         
 def picture_frame_clear_display():
     try:
         resp = requests.get("http://192.168.178.42/clear?color=1")
-        print(f"Cleared Display, response {resp.status_code}")
+        logger.info("Cleared Display, response %s" % resp.status_code)
     except Exception as e:
-        print("Failed to post image:", e)
+        logger.info("Failed to post image: %s" % e)
 
 # --- dispatch table ---
 actions = {
@@ -161,7 +170,7 @@ actions = {
 def on_connect(client, userdata, flags, rc):
     """Called when connected to MQTT broker."""
     client.subscribe("hermes/http/#")
-    print("Connected!!")
+    logger.info("Connected!!")
 
 
 def on_disconnect(client, userdata, flags, rc):
@@ -183,17 +192,17 @@ def on_message(client, userdata, msg):
         try:
             payload = json.loads(msg.payload.decode("utf-8"))
         except json.JSONDecodeError:
-            print("Invalid JSON payload")
+            logger.info("Invalid JSON payload")
             return
 
         if "input" in payload:
             command = payload["input"]
             func = actions.get(command)
             if func:
-                print(f"Executing action for input: {command}")
+                logger.info("Executing action for input: %s" % command)
                 func()
             else:
-                print(f"No action defined for input: {command}")
+                logger.info("No action defined for input: %s" % command)
 
 # --- MQTT Setup ---
 mqtt_client = mqtt.Client()
