@@ -5,6 +5,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 import logging
 import sys
+from datetime import datetime
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
@@ -42,13 +44,26 @@ def draw_info_screen(data):
     draw = ImageDraw.Draw(img)
     draw.fontmode = "1"
 
-    # Header
-    draw.text((20, 10), "KVV", font_size=30, fill=palette_colors[4])
-    draw.line([(10, 46),(790,46)], width=4, fill=palette_colors[0])
-    y_cursor = 55
+    current_time = datetime.now().strftime("%d.%m.%y %H:%M")
+    draw.text((580, 10), current_time, font_size=30, fill=palette_colors[0])
 
+    y_cursor = draw_header(draw, "KVV", 10)
+    y_cursor = draw_kvv_content(draw, data, y_cursor)
+    
+    y_cursor = draw_header(draw, "Weather", y_cursor)
+    y_cursor = draw_weather_content(draw, data, y_cursor)
+
+    return image_to_glds_bytes(img)
+
+def draw_header(draw, text, y_cursor):
+    draw.text((20, y_cursor), text, font_size=30, fill=palette_colors[4])
+    y_cursor += 35
+    draw.line([(10, y_cursor),(790,y_cursor)], width=4, fill=palette_colors[0])
+    return y_cursor + 10
+
+def draw_kvv_content(draw, data, y_cursor):
     if not kvv_response_parser.validate_kvv_response(data, draw):
-        return image_to_glds_bytes(img)
+        return y_cursor + 25
 
     root_element = data["kvv"]["trias:Trias"]["trias:ServiceDelivery"]["trias:DeliveryPayload"]
     warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
@@ -64,7 +79,57 @@ def draw_info_screen(data):
         draw_colored_text(draw, (20,y_cursor), text_parts, 18)
         y_cursor += 25
 
-    return image_to_glds_bytes(img)
+    return y_cursor + 10
+
+def draw_weather_content(draw, data, y_cursor):
+    if "weather" not in data or not data["weather"]:
+        draw.text((20, y_cursor), "No weather data received.", font_size=20, fill=palette_colors[5])
+        return y_cursor + 25
+    elif isinstance(data["weather"], str) and data["weather"].startswith("error:"):
+        draw.text((20, y_cursor), f"<!> {data['weather']}", font_size=20, fill=palette_colors[4])
+        return y_cursor + 25
+
+    try:
+        def draw_hour_block(draw, hour_data, x_pos, y_pos):
+            # Convert Unix timestamp to hour:minute
+            dt = datetime.fromtimestamp(hour_data["dt"])
+            time_str = dt.strftime("%H:%M")
+            
+            # Draw time
+            draw.text((x_pos, y_pos), time_str, font_size=20, fill=palette_colors[0])
+            
+            # Draw weather icon
+            weather_icon = hour_data["weather"][0]["icon"][:2]
+            icon = Image.open(f'./lib/weather_icons/{weather_icon}.png').convert('RGBA')
+            # Get base image from draw object and paste icon
+            draw._image.paste(icon, (x_pos + 2, y_pos + 25), icon)
+            
+            # Draw precipitation if exists
+            if "snow" in hour_data and "1h" in hour_data["snow"]:
+                precip = f"  {hour_data['snow']['1h']}mm"
+            elif "rain" in hour_data and "1h" in hour_data["rain"]:
+                precip = f"  {hour_data['rain']['1h']}mm"
+            else:
+                precip = "     --"
+            draw.text((x_pos, y_pos + 70), precip, font_size=20, fill=palette_colors[3])
+
+        # Draw first 8 hourly entries
+        hourly_data = data["weather"]["hourly"][0:15:2]
+        block_width = 95  # Width for each hour block
+        start_x = 40
+        
+        for i, hour_data in enumerate(hourly_data):
+            x_pos = start_x + (i * block_width)
+            draw_hour_block(draw, hour_data, x_pos, y_cursor)
+            
+        y_cursor += 90  # Total height of each block 
+
+    except Exception as e:
+        logger.info("Failed to render weather view: %s" % e)
+        draw.text((20, y_cursor), f"<!> Failed to render weather view", font_size=20, fill=palette_colors[4])
+        y_cursor += 25
+
+    return y_cursor + 10
 
 def draw_colored_text(draw, origin, parts, fontsize = 20):
     x = origin[0]

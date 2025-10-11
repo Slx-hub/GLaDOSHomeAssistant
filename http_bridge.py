@@ -1,5 +1,5 @@
 import paho.mqtt.client as mqtt
-from flask import Flask
+from flask import Flask, request
 import json
 import os
 import threading
@@ -41,6 +41,8 @@ kvv_request = """
 </Trias>
 """
 
+weather_request = "https://api.openweathermap.org/data/3.0/onecall?lat=48.86241181349633&lon=8.204346854848135&exclude=current,minutely,daily,alerts&units=metric&lang=de&appid=<<weather_token>>"
+
 import logging
 import sys
 logging.basicConfig(
@@ -78,18 +80,13 @@ def get_picture_frame_clear_display():
     threading.Thread(target=picture_frame_clear_display, daemon=True).start()
     return "OK"
 
-# Example endpoints
-@app.route("/turn_on_livingroom")
-def turn_on_livingroom():
-    mqtt_client.publish("hermes/intent/ChangeLightState", slots_to_json({"source": "livingroom", "state": "on"}))
+@app.route("/intent/<intent>")
+def turn_on_livingroom(intent):
+    slots = dict(request.args)
+    mqtt_client.publish(f"hermes/intent/{intent}", slots_to_json(slots))
     return "OK"
 
-@app.route("/turn_off_livingroom")
-def turn_off_livingroom():
-    mqtt_client.publish("hermes/intent/ChangeLightState", slots_to_json({"source": "livingroom", "state": "off"}))
-    return "OK"
-
-@app.route("/custom/<message>")
+@app.route("/query/<message>")
 def custom(message):
     mqtt_client.publish("hermes/nlu/query", json.dumps({"input": message, "siteId": "default"}))
     return "OK"
@@ -98,19 +95,36 @@ def custom(message):
 
 def picture_frame_send_info_screen():
 
+    parsed = {}
+
     try:
         resp = requests.post(
             "https://projekte.kvv-efa.de/schneidertrias/trias",
             headers={"Content-Type": "text/xml"},
             data=fill_variables(kvv_request)
         )
+        resp.raise_for_status()
+        try:
+            parsed["kvv"] = xmltodict.parse(resp.text)
+        except Exception as e:
+            parsed["kvv"] = f"error: {resp.text}"
+            logger.info("Failed to parse XML: %s" % e)
     except Exception as e:
+        parsed["kvv"] = f"error: Status code not OK: {resp.status_code}"
         logger.info("Failed to request KVV: %s" % e)
+
     try:
-        parsed = {"kvv": xmltodict.parse(resp.text)}
+        resp = requests.get(fill_variables(weather_request))
+        resp.raise_for_status()
+        try:
+            parsed["weather"] = resp.json()
+        except Exception as e:
+            parsed["weather"] = f"error: {resp.text}"
+            logger.info("Failed to parse JSON: %s" % e)
     except Exception as e:
-        parsed = {"kvv": f"error: {resp.text}"}
-        logger.info("Failed to parse XML: %s" % e)
+        parsed["weather"] = f"error: Status code not OK: {resp.status_code}"
+        logger.info("Failed to request Weather: %s" % e)
+
     logger.info(f"Received API data")
     image_bytes = picture_frame_util.draw_info_screen(parsed)
     logger.info(f"Generated info screen")
@@ -129,12 +143,16 @@ def fill_variables(content: str) -> str:
     trias_token = os.getenv("TRIAS_TOKEN")
     if not trias_token:
         raise RuntimeError("TRIAS_TOKEN not found in environment variables")
+    weather_token = os.getenv("WEATHER_TOKEN")
+    if not weather_token:
+        raise RuntimeError("WEATHER_TOKEN not found in environment variables")
 
     # Replace placeholders
     filled = (
         content
         .replace("<<date>>", datetime.now().strftime("%Y-%m-%d"))
         .replace("<<trias_token>>", trias_token)
+        .replace("<<weather_token>>", weather_token)
     )
 
     return filled
