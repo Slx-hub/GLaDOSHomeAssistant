@@ -1,0 +1,16 @@
+meta {
+  name: br_turn_off_light
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://192.168.178.30:5123/intent/ChangeLightState?source=livingroom&state=off
+  body: none
+  auth: none
+}
+
+query {
+  source: livingroom
+  state: off
+}

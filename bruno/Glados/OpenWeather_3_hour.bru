@@ -1,0 +1,20 @@
+meta {
+  name: OpenWeather_3_hour
+  type: http
+  seq: 12
+}
+
+get {
+  url: https://api.openweathermap.org/data/3.0/onecall?lat=48.86241181349633&lon=8.204346854848135&exclude=current,minutely,daily,alerts&units=metric&lang=de&appid={{openweather_token}}
+  body: none
+  auth: none
+}
+
+query {
+  lat: 48.86241181349633
+  lon: 8.204346854848135
+  exclude: current,minutely,daily,alerts
+  units: metric
+  lang: de
+  appid: {{openweather_token}}
+}
