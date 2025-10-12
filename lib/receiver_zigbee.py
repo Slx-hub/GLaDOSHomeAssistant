@@ -3,10 +3,16 @@ from lib.I_intent_receiver import Receiver, Reply
 class Zigbee(Receiver):
 
     def receive_intent(self, intent, settings):
+        request_delay = 0.0
 
         if intent.intent == "ChangeSocketState":
             reply_topic = ['z2mq/' + intent.slots["source"] + '/set']
             reply_payload = ['{"state":"' + intent.slots["state"] + '"}']
+
+        if intent.intent == "ResetSocket":
+            request_delay = 5.0
+            reply_topic = ['z2mq/' + intent.slots["source"] + '/set', 'z2mq/' + intent.slots["source"] + '/set']
+            reply_payload = ['{"state":"off"}', '{"state":"on"}']
 
         if intent.intent == "ChangeLightState":
             sources = [intent.slots["source"]]
@@ -36,4 +42,4 @@ class Zigbee(Receiver):
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
             reply_payload = ['<restore>','<restore>','{"state":"off"}','{"state":"off"}','{"state":"off"}']
             
-        return Reply(glados_path=Receiver.get_reply_from_settings(intent, settings), mqtt_topic= reply_topic, mqtt_payload= reply_payload, deny_scheduled= deny_scheduled)
+        return Reply(glados_path=Receiver.get_reply_from_settings(intent, settings), mqtt_topic= reply_topic, mqtt_payload= reply_payload, deny_scheduled= deny_scheduled, mqtt_request_delay= request_delay)

@@ -47,7 +47,7 @@ devices:
   '0x18fc260000b3cf9e':
     friendly_name: bedlightr
   '0xa4c138f463500d6c':
-    friendly_name: lavalamp
+    friendly_name: sonos
   '0xa4c1385ac7c28279':
     friendly_name: therm_balcony
   '0xa4c138847116602a':

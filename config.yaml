@@ -19,10 +19,14 @@ IntentRouting:
     - StealthMode
     - RLMode
     - ChangeSocketState
+    - ResetSocket
   Timer:
     - SetTimer
     - RemoveTimer
     - QueryTimer
+  Alarm:
+    - ChangeAlarmState
+    - ChangeAlarmTime
 
 HandlerSettings:
 

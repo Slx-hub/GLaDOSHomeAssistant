@@ -84,6 +84,8 @@ def on_scheduled(intent, command):
 
 def handle_reply(reply, do_vocal_reply, is_scheduled):
 	if reply:
+		if enable_debug:
+			logger.info("FINAL REPLY:  %s" % reply)
 		if do_vocal_reply:
 			speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
 			if reply.neopixel_color:
@@ -103,18 +105,17 @@ def publish(reply, is_scheduled):
 			if reply.mqtt_payload[i] == "<restore>":
 				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
 				last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = False)
-				continue
-
-			if not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
+			elif not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
 				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
 				if not reply.deny_scheduled or last_reply == None:
 					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
 				else:
 					last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = reply.deny_scheduled)
-				continue
-			
-			if is_scheduled:
+			elif is_scheduled:
 				last_reply_for_topics[reply.mqtt_topic[i]]._replace(payload = reply.mqtt_payload[i])
+				
+			if i < len(reply.mqtt_topic) - 1:  # Only sleep if there's another iteration coming
+				sleep(reply.mqtt_request_delay)
 
 def handle_message(client, topic, payload):
 
