@@ -103,6 +103,8 @@ def draw_weather_content(draw, data, y_cursor):
             icon = Image.open(f'./lib/weather_icons/{weather_icon}.png').convert('RGBA')
             # Get base image from draw object and paste icon
             draw._image.paste(icon, (x_pos + 2, y_pos + 25), icon)
+
+            draw.text((x_pos, y_pos + 70), f"  {hour_data['temp']}°C", font_size=20, fill=palette_colors[0])
             
             # Draw precipitation if exists
             if "snow" in hour_data and "1h" in hour_data["snow"]:
@@ -111,7 +113,7 @@ def draw_weather_content(draw, data, y_cursor):
                 precip = f"  {hour_data['rain']['1h']}mm"
             else:
                 precip = "     --"
-            draw.text((x_pos, y_pos + 70), precip, font_size=20, fill=palette_colors[3])
+            draw.text((x_pos, y_pos + 95), precip, font_size=20, fill=palette_colors[3])
 
         # Draw first 8 hourly entries
         hourly_data = data["weather"]["hourly"][0:15:2]
