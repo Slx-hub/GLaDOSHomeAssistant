@@ -13,6 +13,7 @@ from lib import receiver_conversation
 from lib import receiver_system
 from lib import receiver_timer
 from lib import receiver_zigbee
+from lib import receiver_alarm
 from lib import module_speaker as speaker
 from lib import module_neopixel as neopixel
 from lib import alias_converter
@@ -33,6 +34,7 @@ receivers = {
 	'System': receiver_system.System(),
 	'Timer': receiver_timer.Timer(),
 	'Zigbee': receiver_zigbee.Zigbee(),
+	'Alarm': receiver_alarm.Alarm(),
 }
 
 enable_debug = False
@@ -86,6 +88,11 @@ def handle_reply(reply, do_vocal_reply, is_scheduled):
 	if reply:
 		if enable_debug:
 			logger.info("FINAL REPLY:  %s" % reply)
+		if reply.next_intent != "":
+			logger.info("Chaining another intent: %s" % reply.next_intent)
+			elements = reply.next_intent.split(">")
+			on_scheduled(elements[0], elements[1].strip())
+			return
 		if do_vocal_reply:
 			speaker.aplay_given_path(reply.glados_path, config_GeneralSettings["SoundPack"])
 			if reply.neopixel_color:

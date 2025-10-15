@@ -25,6 +25,7 @@ IntentRouting:
     - RemoveTimer
     - QueryTimer
   Alarm:
+    - Alarm
     - ChangeAlarmState
     - ChangeAlarmTime
 
@@ -89,11 +90,11 @@ SchedulerSettings:
     "02:00": "Reboot>"
 
     # Alarm section, 'A' flags the timestamp as alarm element and prevents overriding other tasks
-    "07:00-A": "Alias> scheduled_alarm_low"
-    "07:15-A": "Alias> scheduled_alarm_medium"
-    "07:25-A": "Alias> scheduled_alarm_full"
-    "07:27-A": "Scheduled> scheduled_alarm_ring"
-    "07:35-A": "Alias> scheduled_alarm_off"
+    "07:00-A": "Alarm> scheduled_alarm_low"
+    "07:15-A": "Alarm> scheduled_alarm_medium"
+    "07:25-A": "Alarm> scheduled_alarm_full"
+    "07:27-A": "Alarm> scheduled_alarm_ring"
+    "07:35-A": "Alarm> scheduled_alarm_off"
 
     "07:32": "hermes/http/PictureFrame> pf_display_info_screen"
     "07:54": "hermes/http/PictureFrame> pf_display_info_screen"
