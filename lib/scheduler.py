@@ -17,9 +17,10 @@ def setup(callback, settings):
 def sanitize_config_keys(settings):
     sanitized_keys = []
     for key in settings.keys():
+        # Ignore keywords that weren't replaced with values
         if key.startswith('<'):
             continue
-        sanitized_keys.append((re.sub("-\d", "", key), settings[key]))
+        sanitized_keys.append((re.sub("-\w", "", key), settings[key]))
     return sanitized_keys
 
 def schedule(scheduler, callback, config_val):
