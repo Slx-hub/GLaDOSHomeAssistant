@@ -67,7 +67,7 @@
       'scheduled_reminder_pills': 'special/reminder/pills.wav'
       'scheduled_reminder_go_dark': 'special/reminder/go_dark'
   'Alarm':
-    'armed': !!bool 'false'
+    'armed': !!bool 'true'
 'SchedulerSettings':
   'daily':
     '<sunset>': '30%-Alias> scheduled_lavalamp_on'

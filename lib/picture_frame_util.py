@@ -69,7 +69,7 @@ def draw_kvv_content(draw, data, y_cursor):
     warnings = root_element["trias:TripResponse"]["trias:TripResponseContext"]["trias:Situations"]
     trips = root_element["trias:TripResponse"]["trias:TripResult"]
 
-    if warnings is not None and warnings.get("trias:PtSituation" is not None):
+    if warnings != None and warnings.get("trias:PtSituation") != None:
         warning = warnings["trias:PtSituation"]
         draw.text((20, y_cursor), "<! {0}> {1}".format(warning["siri:Description"],warning["siri:Summary"]), font_size=20, fill=palette_colors[4])
         y_cursor += 25
@@ -104,13 +104,13 @@ def draw_weather_content(draw, data, y_cursor):
             # Get base image from draw object and paste icon
             draw._image.paste(icon, (x_pos + 2, y_pos + 25), icon)
 
-            draw.text((x_pos, y_pos + 70), f"  {hour_data['temp']}°C", font_size=20, fill=palette_colors[0])
+            draw.text((x_pos, y_pos + 70), f" {round(hour_data['temp'])}°C", font_size=20, fill=palette_colors[0])
             
             # Draw precipitation if exists
             if "snow" in hour_data and "1h" in hour_data["snow"]:
-                precip = f"  {hour_data['snow']['1h']}mm"
+                precip = f" {round(hour_data['snow']['1h'])}mm"
             elif "rain" in hour_data and "1h" in hour_data["rain"]:
-                precip = f"  {hour_data['rain']['1h']}mm"
+                precip = f" {round(hour_data['rain']['1h'])}mm"
             else:
                 precip = "     --"
             draw.text((x_pos, y_pos + 95), precip, font_size=20, fill=palette_colors[3])

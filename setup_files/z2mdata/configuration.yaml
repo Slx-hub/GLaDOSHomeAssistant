@@ -54,6 +54,8 @@ devices:
     friendly_name: therm_bedroom_window
   '0xa4c13896e74e6997':
     friendly_name: '0xa4c13896e74e6997'
+  '0xa4c138d33a3d90f7':
+    friendly_name: lavalamp
 groups:
   '1':
     friendly_name: Thermometers
