@@ -123,7 +123,7 @@ class Alarm(Receiver):
 				daily[f"{alarm_times['off']}-A"] = "Alias> scheduled_alarm_off"
 			
 			with open("config.yaml", 'w') as file:
-				yaml.dump(config, file, default_flow_style=False, sort_keys=False)
+				yaml.dump(config, file, default_flow_style=False, sort_keys=False, default_style='"')
 			
 			logger.info(f"Updated alarm schedule: {alarm_times}")
 			return True
