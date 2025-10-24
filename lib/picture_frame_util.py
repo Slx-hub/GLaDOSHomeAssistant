@@ -31,6 +31,15 @@ def load_random_glds_image():
     with open(file_path, "rb") as f:
         return f.read()
 
+def load_specific_glds_image():
+    file_path = "./lib/pic_frame_images/glotz.glds"
+    if not os.path.isfile(file_path):
+        logger.info("No specific image found at %s" % file_path)
+        return
+
+    with open(file_path, "rb") as f:
+        return f.read()
+
 ##############################
 ## IMAGE RENDERING
 ##############################

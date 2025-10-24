@@ -74,10 +74,14 @@ def picture_frame_display_info_screen():
     threading.Thread(target=picture_frame_send_info_screen, daemon=True).start()
     return "OK"
 
-
 @app.route("/picture_frame_clear_display")
 def get_picture_frame_clear_display():
     threading.Thread(target=picture_frame_clear_display, daemon=True).start()
+    return "OK"
+
+@app.route("/picture_frame_special_action")
+def get_picture_frame_special_action():
+    threading.Thread(target=picture_frame_special_action, daemon=True).start()
     return "OK"
 
 @app.route("/intent/<intent>")
@@ -174,6 +178,17 @@ def picture_frame_clear_display():
         resp = requests.get("http://192.168.178.42/clear?color=1")
         logger.info("Cleared Display, response %s" % resp.status_code)
     except Exception as e:
+        logger.info("Failed to post image: %s" % e)        
+
+def picture_frame_special_action():
+    try:
+        resp = requests.post(
+            "http://192.168.178.42/image",
+            headers={"Content-Type": "application/octet-stream"},
+            data=picture_frame_util.load_specific_glds_image()
+        )
+        logger.info("Performed special action, response %s" % resp.status_code)
+    except Exception as e:
         logger.info("Failed to post image: %s" % e)
 
 # --- dispatch table ---
@@ -181,6 +196,7 @@ actions = {
     "pf_display_image": picture_frame_send_image,
     "pf_display_info_screen": picture_frame_send_info_screen,
     "pf_clear_display": picture_frame_clear_display,
+    "pf_special_action": picture_frame_special_action,
 }
 
 #####################################################################################
