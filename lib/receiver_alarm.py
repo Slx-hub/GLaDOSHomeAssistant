@@ -37,10 +37,7 @@ class Alarm(Receiver):
 		# Update config file
 		if self._update_alarm_armed_state(armed):
 			# Trigger config reload
-			return Reply(next_intent="Alias> " + intent.text)
-			return Reply(glados_path='Reload-Config',
-						mqtt_topic=['hermes/intent/'], 
-						mqtt_payload=['{"input": "reload config", "intent": {"intentName": "Reload-Config"}, "slots": []}'])
+			return Reply(next_intent="Reload-Config> ")
 		else:
 			return Reply(glados_path='command_failed')
 
@@ -68,9 +65,7 @@ class Alarm(Receiver):
 			# Update config file
 			if self._update_alarm_schedule(alarm_times):
 				# Trigger config reload
-				return Reply(glados_path='command_success',
-							mqtt_topic=['hermes/intent/Reload-Config'],
-							mqtt_payload=['{"input": "reload config", "intent": {"intentName": "Reload-Config"}, "slots": []}'])
+				return Reply(next_intent="Reload-Config> ")
 			else:
 				return Reply(glados_path='command_failed')
 				
@@ -91,7 +86,7 @@ class Alarm(Receiver):
 			config['HandlerSettings']['Alarm']['armed'] = armed
 			
 			with open("config.yaml", 'w') as file:
-				yaml.dump(config, file, default_flow_style=False, sort_keys=False)
+				yaml.dump(config, file, default_flow_style=False, sort_keys=False, default_style="'")
 			
 			logger.info(f"Updated alarm armed state to: {armed}")
 			return True
@@ -123,7 +118,7 @@ class Alarm(Receiver):
 				daily[f"{alarm_times['off']}-A"] = "Alias> scheduled_alarm_off"
 			
 			with open("config.yaml", 'w') as file:
-				yaml.dump(config, file, default_flow_style=False, sort_keys=False, default_style='"')
+				yaml.dump(config, file, default_flow_style=False, sort_keys=False, default_style="'")
 			
 			logger.info(f"Updated alarm schedule: {alarm_times}")
 			return True

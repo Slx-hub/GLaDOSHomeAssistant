@@ -1,107 +1,92 @@
-GeneralSettings:
-  SoundPack: "eleven"
-
-IntentRouting:
-
-  Conversation:
-    - Greet
-    - Conversation
-    - Scheduled
-  System:
-    - Shutdown
-    - Reboot
-    - HealthCheck
-  Zigbee:
-    - ChangeLightState
-    - ChangeLightColor
-    - VRMode
-    - CineMode
-    - StealthMode
-    - RLMode
-    - ChangeSocketState
-    - ResetSocket
-  Timer:
-    - SetTimer
-    - RemoveTimer
-    - QueryTimer
-  Alarm:
-    - Alarm
-    - ChangeAlarmState
-    - ChangeAlarmTime
-
-HandlerSettings:
-
-  Zigbee:
-    ReceiverGroups:
-      livingroom:
-        - showcase
-        - couchlamp
-      bedroom:
-        - bedlightr
-        - bedlightl
-
-    ReceiverProperties:
-      showcase:
-        default: '"brightness":100,"color_mode":"color_temp","color_temp":250'
-        dim: '"brightness":40,"color_mode":"color_temp","color_temp":250'
-      couchlamp:
-        default: '"brightness":40'
-        dim: '"brightness":10'
-        min: '"brightness":2'
-      bedlightr:
-        default: '"brightness":80'
-        dim: '"brightness":10'
-        full: '"brightness":250'
-      bedlightl:
-        default: '"brightness":80'
-        dim: '"brightness":10'
-        full: '"brightness":250'
-
-    ResponseMap:
-      "VRMode": "special/lighting/vr"
-      "CineMode": "special/lighting/cinema"
-      "RLMode": "special/lighting/rl"
-
-  System:
-    ram-threshold: 70.0
-
-  Conversation:
-    ResponseMap:
-      "Greet": "special/greet"
-      "ping": "special/conversation/pong.wav"
-      "hello there": "special/conversation/kenobi.wav"
-      "do nothing": "command_success"
-      "scheduled_alarm_ring": "special/alarm"
-      "scheduled_reminder_pills": "special/reminder/pills.wav"
-      "scheduled_reminder_go_dark": "special/reminder/go_dark"
-
-  Alarm:
-    armed: true
-    
-SchedulerSettings:
-
-  daily:
-    "<sunset>": "30%-Alias> scheduled_lavalamp_on"
-    "<sunset>-1": "Alias> scheduled_evening_light"
-    "22:00": "Alias> scheduled_night_light"
-    "22:22": "Scheduled> scheduled_reminder_go_dark"
-    "23:00": "Alias> scheduled_light_off"
-    "23:10": "Alias> scheduled_lavalamp_off"
-    "02:00": "Reboot>"
-
-    # Alarm section, 'A' flags the timestamp as alarm element and prevents overriding other tasks
-    "07:00-A": "Alarm> scheduled_alarm_low"
-    "07:15-A": "Alarm> scheduled_alarm_medium"
-    "07:25-A": "Alarm> scheduled_alarm_full"
-    "07:27-A": "Alarm> scheduled_alarm_ring"
-    "07:35-A": "Alarm> scheduled_alarm_off"
-
-    "07:32": "hermes/http/PictureFrame> pf_display_info_screen"
-    "07:54": "hermes/http/PictureFrame> pf_display_info_screen"
-    "08:30": "hermes/http/PictureFrame> pf_display_image"
-    "15:30": "hermes/http/PictureFrame> pf_display_image"
-    "23:30": "hermes/http/PictureFrame> pf_clear_display"
-    
-  hourly:
-  everyXminutes:
-    "60": "HealthCheck>"
+'GeneralSettings':
+  'SoundPack': 'eleven'
+'IntentRouting':
+  'Conversation':
+  - 'Greet'
+  - 'Conversation'
+  - 'Scheduled'
+  'System':
+  - 'Shutdown'
+  - 'Reboot'
+  - 'HealthCheck'
+  'Zigbee':
+  - 'ChangeLightState'
+  - 'ChangeLightColor'
+  - 'VRMode'
+  - 'CineMode'
+  - 'StealthMode'
+  - 'RLMode'
+  - 'ChangeSocketState'
+  - 'ResetSocket'
+  'Timer':
+  - 'SetTimer'
+  - 'RemoveTimer'
+  - 'QueryTimer'
+  'Alarm':
+  - 'Alarm'
+  - 'ChangeAlarmState'
+  - 'ChangeAlarmTime'
+'HandlerSettings':
+  'Zigbee':
+    'ReceiverGroups':
+      'livingroom':
+      - 'showcase'
+      - 'couchlamp'
+      'bedroom':
+      - 'bedlightr'
+      - 'bedlightl'
+    'ReceiverProperties':
+      'showcase':
+        'default': '"brightness":100,"color_mode":"color_temp","color_temp":250'
+        'dim': '"brightness":40,"color_mode":"color_temp","color_temp":250'
+      'couchlamp':
+        'default': '"brightness":40'
+        'dim': '"brightness":10'
+        'min': '"brightness":2'
+      'bedlightr':
+        'default': '"brightness":80'
+        'dim': '"brightness":10'
+        'full': '"brightness":250'
+      'bedlightl':
+        'default': '"brightness":80'
+        'dim': '"brightness":10'
+        'full': '"brightness":250'
+    'ResponseMap':
+      'VRMode': 'special/lighting/vr'
+      'CineMode': 'special/lighting/cinema'
+      'RLMode': 'special/lighting/rl'
+  'System':
+    'ram-threshold': !!float '70.0'
+  'Conversation':
+    'ResponseMap':
+      'Greet': 'special/greet'
+      'ping': 'special/conversation/pong.wav'
+      'hello there': 'special/conversation/kenobi.wav'
+      'do nothing': 'command_success'
+      'scheduled_alarm_ring': 'special/alarm'
+      'scheduled_reminder_pills': 'special/reminder/pills.wav'
+      'scheduled_reminder_go_dark': 'special/reminder/go_dark'
+  'Alarm':
+    'armed': !!bool 'true'
+'SchedulerSettings':
+  'daily':
+    '<sunset>': '30%-Alias> scheduled_lavalamp_on'
+    '<sunset>-1': 'Alias> scheduled_evening_light'
+    '22:00': 'Alias> scheduled_night_light'
+    '22:22': 'Scheduled> scheduled_reminder_go_dark'
+    '23:00': 'Alias> scheduled_light_off'
+    '23:10': 'Alias> scheduled_lavalamp_off'
+    '02:00': 'Reboot>'
+    '07:00-A': 'Alarm> scheduled_alarm_low'
+    '07:15-A': 'Alarm> scheduled_alarm_medium'
+    '07:25-A': 'Alarm> scheduled_alarm_full'
+    '07:27-A': 'Alarm> scheduled_alarm_ring'
+    '07:35-A': 'Alarm> scheduled_alarm_off'
+    '07:32': 'hermes/http/PictureFrame> pf_display_info_screen'
+    '07:54': 'hermes/http/PictureFrame> pf_display_info_screen'
+    '08:30': 'hermes/http/PictureFrame> pf_display_image'
+    '15:30': 'hermes/http/PictureFrame> pf_display_image'
+    '23:30': 'hermes/http/PictureFrame> pf_clear_display'
+  'hourly': !!null 'null'
+  'everyXminutes':
+    '60': 'HealthCheck>'
