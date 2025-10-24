@@ -48,10 +48,22 @@ def draw_info_screen(data):
     draw.text((580, 10), current_time, font_size=30, fill=palette_colors[0])
 
     y_cursor = draw_header(draw, "KVV", 10)
-    y_cursor = draw_kvv_content(draw, data, y_cursor)
+
+    try:
+        y_cursor = draw_kvv_content(draw, data, y_cursor)
+    except Exception as e:
+        logger.info("Failed to render KVV view: %s" % e)
+        draw.text((20, y_cursor), f"<!> Failed to render KVV view", font_size=20, fill=palette_colors[4])
+        y_cursor += 25
     
     y_cursor = draw_header(draw, "Weather", y_cursor)
-    y_cursor = draw_weather_content(draw, data, y_cursor)
+
+    try:
+        y_cursor = draw_weather_content(draw, data, y_cursor)
+    except Exception as e:
+        logger.info("Failed to render Weather view: %s" % e)
+        draw.text((20, y_cursor), f"<!> Failed to render Weather view", font_size=20, fill=palette_colors[4])
+        y_cursor += 25
 
     return image_to_glds_bytes(img)
 
@@ -70,9 +82,12 @@ def draw_kvv_content(draw, data, y_cursor):
     trips = root_element["trias:TripResponse"]["trias:TripResult"]
 
     if warnings != None and warnings.get("trias:PtSituation") != None:
-        warning = warnings["trias:PtSituation"]
-        draw.text((20, y_cursor), "<! {0}> {1}".format(warning["siri:Description"],warning["siri:Summary"]), font_size=20, fill=palette_colors[4])
-        y_cursor += 25
+        pt_situation = warnings["trias:PtSituation"]
+        warnings_list = pt_situation if isinstance(pt_situation, list) else [pt_situation]
+        
+        for warning in warnings_list:
+            draw.text((20, y_cursor), "<! {0}> {1}".format(warning["siri:Description"],warning["siri:Summary"]), font_size=20, fill=palette_colors[4])
+            y_cursor += 25
 
     for trip in trips:
         text_parts = kvv_response_parser.format_trip_for_display(trip)
