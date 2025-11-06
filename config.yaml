@@ -35,6 +35,9 @@
       'bedroom':
       - 'bedlightr'
       - 'bedlightl'
+      'bathroom':
+      - 'bathroom1'
+      - 'bathroom2'
     'ReceiverProperties':
       'showcase':
         'default': '"brightness":100,"color_mode":"color_temp","color_temp":250'
@@ -51,6 +54,12 @@
         'default': '"brightness":80'
         'dim': '"brightness":10'
         'full': '"brightness":250'
+      'bathroom1':
+        'default': '"brightness":250'
+        'dim': '"brightness":0'
+      'bathroom2':
+        'default': '"brightness":250'
+        'dim': '"brightness":80'
     'ResponseMap':
       'VRMode': 'special/lighting/vr'
       'CineMode': 'special/lighting/cinema'
