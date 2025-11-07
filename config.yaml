@@ -59,7 +59,7 @@
         'dim': '"brightness":0'
       'bathroom2':
         'default': '"brightness":250'
-        'dim': '"brightness":80'
+        'dim': '"brightness":50'
     'ResponseMap':
       'VRMode': 'special/lighting/vr'
       'CineMode': 'special/lighting/cinema'
