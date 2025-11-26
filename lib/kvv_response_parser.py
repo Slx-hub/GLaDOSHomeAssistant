@@ -122,6 +122,47 @@ def _format_time_local(dt_aware: Optional[datetime], tz_name: str = "Europe/Berl
         local = dt_aware.astimezone()
     return local.strftime("%H:%M")
 
+KVV_LINE_WHITELIST = ["RE2", "RE7", "S7", "S8", "S9", "2", "3", "4"]
+
+def preprocess_kvv_warning(warning):
+    description = ungermanize(warning.get("siri:Description", ""))
+    summary = ungermanize(warning.get("siri:Summary", ""))
+    
+    # Filter lines in description
+    if description.startswith("Linien "):
+        lines_str = description[7:]  # Remove "Linien " prefix
+        lines = [line.strip() for line in lines_str.split(",")]
+        filtered_lines = [line for line in lines if line in KVV_LINE_WHITELIST]
+        description = ", ".join(filtered_lines) if filtered_lines else ""
+        if description == "":
+            return None
+    
+    return description, summary
+
+def ungermanize(text):
+    """Replace German umlauts and special characters with ASCII substitutions"""
+    replacements = {
+        'ä': 'ae',
+        'ö': 'oe',
+        'ü': 'ue',
+        'ß': 'ss',
+        'Ä': 'Ae',
+        'Ö': 'Oe',
+        'Ü': 'Ue',
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    return text
+
+def city_shorthand(stop_name: str) -> str:
+    shorthands = {
+        "Karlsruhe": "KA",
+        "Rastatt": "RA",
+    }
+    for char, replacement in shorthands.items():
+        stop_name = stop_name.replace(char, replacement)
+    return stop_name
+
 def format_trip_for_display(trip_wrapper: Dict[str, Any], tz_name: str = "Europe/Berlin") -> List[Tuple[str, int]]:
     if "trias:Trip" in trip_wrapper and isinstance(trip_wrapper["trias:Trip"], dict):
         trip_obj = trip_wrapper["trias:Trip"]
@@ -214,7 +255,7 @@ def format_trip_for_display(trip_wrapper: Dict[str, Any], tz_name: str = "Europe
         result.append(("-", 3))
 
         # board stop + bay
-        board_trim = (leg["board_name"] or "")[:7]
+        board_trim = ungermanize(city_shorthand(leg["board_name"] or ""))[:7]
         result.append((board_trim, 0))
         if leg["bay"]:
             result.append((f"||{leg['bay']}", 3))

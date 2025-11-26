@@ -108,6 +108,7 @@ def picture_frame_send_info_screen():
             data=fill_variables(kvv_request)
         )
         resp.raise_for_status()
+        resp.encoding = 'utf-8'  # Explicitly set encoding to UTF-8
         try:
             parsed["kvv"] = xmltodict.parse(resp.text)
         except Exception as e:
