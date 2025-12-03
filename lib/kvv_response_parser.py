@@ -129,7 +129,7 @@ def preprocess_kvv_warning(warning):
     summary = ungermanize(warning.get("siri:Summary", ""))
     
     # Filter lines in description
-    if description.startswith("Linien "):
+    if description.startswith("Linien"):
         lines_str = description[7:]  # Remove "Linien " prefix
         lines = [line.strip() for line in lines_str.split(",")]
         filtered_lines = [line for line in lines if line in KVV_LINE_WHITELIST]
@@ -137,10 +137,39 @@ def preprocess_kvv_warning(warning):
         if description == "":
             return None
     
+    # Add validity period if present
+    validity = warning.get("siri:ValidityPeriod")
+    if validity:
+        start_time_str = validity.get("siri:StartTime")
+        end_time_str = validity.get("siri:EndTime")
+        
+        if start_time_str and end_time_str:
+            start_time = _parse_iso_time_to_aware(start_time_str)
+            end_time = _parse_iso_time_to_aware(end_time_str)
+            
+            if start_time and end_time:
+                # Convert to local timezone
+                start_local = start_time.astimezone(ZoneInfo("Europe/Berlin"))
+                end_local = end_time.astimezone(ZoneInfo("Europe/Berlin"))
+                
+                # Check if same day
+                if start_local.date() == end_local.date():
+                    # Same day: "dd.MM hh:mm - hh:mm"
+                    time_str = start_local.strftime("%d.%m %H:%M") + " - " + end_local.strftime("%H:%M")
+                else:
+                    # Different days: "dd.MM hh:mm - dd.MM hh:mm"
+                    time_str = start_local.strftime("%d.%m %H:%M") + " - " + end_local.strftime("%d.%m %H:%M")
+                
+                description += f" [{time_str}]"
+    
     return description, summary
 
 def ungermanize(text):
     """Replace German umlauts and special characters with ASCII substitutions"""
+
+    if text is None:
+        return ""
+        
     replacements = {
         'ä': 'ae',
         'ö': 'oe',

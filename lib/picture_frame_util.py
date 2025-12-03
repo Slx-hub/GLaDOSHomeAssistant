@@ -95,12 +95,18 @@ def draw_kvv_content(draw, data, y_cursor):
         warnings_list = pt_situation if isinstance(pt_situation, list) else [pt_situation]
         
         for warning in warnings_list:
-            result = kvv_response_parser.preprocess_kvv_warning(warning)
-            if result is None:
+            try:
+                result = kvv_response_parser.preprocess_kvv_warning(warning)
+                if result is None:
+                    continue
+                description, summary = result
+                draw.text((20, y_cursor), "<! {0}> {1}".format(description, summary), font_size=12, fill=palette_colors[4])
+                y_cursor += 15
+            except Exception as e:
+                draw.text((20, y_cursor), "<! Failed to render > {0}".format(str(e)), font_size=12, fill=palette_colors[4])
+                y_cursor += 15
+                logger.warning("Failed to process warning: %s" % e)
                 continue
-            description, summary = result
-            draw.text((20, y_cursor), "<! {0}> {1}".format(description, summary), font_size=12, fill=palette_colors[4])
-            y_cursor += 15
         y_cursor += 5
 
     for trip in trips:
