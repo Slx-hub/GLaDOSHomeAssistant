@@ -60,6 +60,8 @@ devices:
     friendly_name: bathroom1
   '0xa4c1389e08f92ccc':
     friendly_name: bathroom2
+  '0xa4c138f000925c5f':
+    friendly_name: printer
 groups:
   '1':
     friendly_name: Thermometers
