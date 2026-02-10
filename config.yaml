@@ -79,7 +79,7 @@
     'armed': !!bool 'true'
 'SchedulerSettings':
   'daily':
-    '<sunset>': '30%-Alias> scheduled_lavalamp_on'
+    '<sunset>': '10%-Alias> scheduled_lavalamp_on'
     '<sunset>-1': 'Alias> scheduled_evening_light'
     '22:00': 'Alias> scheduled_night_light'
     '22:22': 'Scheduled> scheduled_reminder_go_dark'

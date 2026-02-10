@@ -28,7 +28,7 @@ class Zigbee(Receiver):
         deny_scheduled = False
         if intent.intent == "VRMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
-            reply_payload = ['{"state":"off"}','{"state":"on","brightness":100,"color_mode":"xy","color":{"x":0.1459,"y":0.2382}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
+            reply_payload = ['{"state":"off"}','{"state":"on","brightness":30,"color_mode":"xy","color":{"x":0.1459,"y":0.2382}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
             deny_scheduled = True
         if intent.intent == "CineMode":
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set']
