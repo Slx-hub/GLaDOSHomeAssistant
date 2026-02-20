@@ -27,7 +27,7 @@ class Reply:
 	mqtt_request_delay: float = 0.0
 	mqtt_topic: List = field(default_factory=lambda: [])
 	mqtt_payload: List = field(default_factory=lambda: [])
-	deny_scheduled: bool = False
+	is_user_override: bool = False
 	override_silent: bool = False
 
 class Intent:

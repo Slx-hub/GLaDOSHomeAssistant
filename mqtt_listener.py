@@ -3,7 +3,6 @@ import paho.mqtt.client as mqtt
 import requests
 import json, yaml
 from datetime import datetime
-from collections import namedtuple
 from multiprocessing import Process
 from time import sleep
 
@@ -19,6 +18,7 @@ from lib import module_neopixel as neopixel
 from lib import alias_converter
 from lib import scheduler
 from lib import intent_randomizer
+from lib.device_state_store import DeviceStateStore
 
 import logging
 import sys
@@ -101,27 +101,29 @@ def handle_reply(reply, do_vocal_reply, is_scheduled):
 				client.publish("hermes/tts/say", json.dumps({"text": reply.tts_reply}))
 		publish(reply, is_scheduled)
 
-ReplyHistory = namedtuple('ReplyHistory', ['payload', 'deny_scheduled'])
-last_reply_for_topics = {}
+device_state = DeviceStateStore()
+device_state.reset()
 
 def publish(reply, is_scheduled):
-	global last_reply_for_topics
 	if reply.mqtt_topic != '' and reply.mqtt_payload != '':
 		for i in range(len(reply.mqtt_topic)):
-			last_reply = last_reply_for_topics[reply.mqtt_topic[i]] if reply.mqtt_topic[i] in last_reply_for_topics else None
-			if reply.mqtt_payload[i] == "<restore>":
-				client.publish(reply.mqtt_topic[i], last_reply_for_topics[reply.mqtt_topic[i]].payload)
-				last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = False)
-			elif not is_scheduled or last_reply == None or not last_reply.deny_scheduled:
-				client.publish(reply.mqtt_topic[i], reply.mqtt_payload[i])
-				if not reply.deny_scheduled or last_reply == None:
-					last_reply_for_topics[reply.mqtt_topic[i]] = ReplyHistory(reply.mqtt_payload[i], reply.deny_scheduled)
-				else:
-					last_reply_for_topics[reply.mqtt_topic[i]]._replace(deny_scheduled = reply.deny_scheduled)
+			topic = reply.mqtt_topic[i]
+			payload = reply.mqtt_payload[i]
+
+			if payload == "<release-override>":
+				base = device_state.clear_override(topic)
+				if base:
+					client.publish(topic, base)
+			elif reply.is_user_override:
+				device_state.set_override(topic, payload)
+				client.publish(topic, payload)
 			elif is_scheduled:
-				last_reply_for_topics[reply.mqtt_topic[i]]._replace(payload = reply.mqtt_payload[i])
-				
-			if i < len(reply.mqtt_topic) - 1:  # Only sleep if there's another iteration coming
+				if device_state.update_base(topic, payload):
+					client.publish(topic, payload)
+			else:
+				client.publish(topic, payload)
+
+			if i < len(reply.mqtt_topic) - 1:
 				sleep(reply.mqtt_request_delay)
 
 def handle_message(client, topic, payload):
