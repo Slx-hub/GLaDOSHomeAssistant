@@ -11,7 +11,9 @@ dict = {'noodle time': Intent(intent='SetTimer', slots={'amount': 8, 'scale': 'm
         'scheduled_alarm_full': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'full', 'source': 'bedroom'}),
         'scheduled_alarm_ring': Intent(intent='Conversation', text='scheduled_alarm_ring'),
         'scheduled_lavalamp_on': Intent(intent='ChangeSocketState', slots={'state': 'on', 'source': 'lavalamp'}),
-        'scheduled_lavalamp_off': Intent(intent='ChangeSocketState', slots={'state': 'off', 'source': 'lavalamp'})}
+        'scheduled_lavalamp_off': Intent(intent='ChangeSocketState', slots={'state': 'off', 'source': 'lavalamp'}),
+        'scheduled_bathroom_dim': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'dim', 'source': 'bathroom'}),
+        'scheduled_bathroom_default': Intent(intent='ChangeLightState', slots={'state': 'on', 'mode': 'default', 'source': 'bathroom'})}
 
 def convert_alias(intent):
     if dict[intent.text]:

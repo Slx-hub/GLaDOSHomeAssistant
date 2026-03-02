@@ -94,6 +94,23 @@ class DeviceStateStore:
                      topic, "restored" if base else "empty")
         return base
 
+    def get_state(self, topic):
+        """Return the effective state for *topic*.
+
+        Returns the override if one is active, otherwise the base
+        state, or ``None`` if nothing has been recorded.
+        """
+        def _read(data):
+            entry = data.get(topic)
+            if not entry:
+                return None
+            override = entry.get('override')
+            if override is not None:
+                return override
+            return entry.get('base')
+
+        return self._transact(_read)
+
     def reset(self):
         """Wipe all state (useful on startup / tests)."""
         with open(self.filepath, 'w') as f:

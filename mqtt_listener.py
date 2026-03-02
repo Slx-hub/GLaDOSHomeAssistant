@@ -45,6 +45,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe("hermes/asr/textCaptured")
 	client.subscribe("hermes/intent/#")
 	client.subscribe("hermes/nlu/intentNotRecognized")
+	client.subscribe("z2mq/+/availability")
 	logger.info("Connected!!")
 
 
@@ -55,6 +56,10 @@ def on_disconnect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
 	"""Called each time a message is received on a subscribed topic."""
+	if msg.topic.startswith('z2mq/') and msg.topic.endswith('/availability'):
+		handle_device_availability(client, msg)
+		return
+
 	payload = json.loads(msg.payload)
 	if enable_debug:
 		logger.info("TOPIC:  %s" % msg.topic)
@@ -67,6 +72,24 @@ def on_message(client, userdata, msg):
 		reply = Reply(glados_path='command_failed', neopixel_color=[0b11111111, 40, 0, 0, 0, 30])
 
 	handle_reply(reply, True, False)
+
+def handle_device_availability(client, msg):
+	"""Replay stored state when a Zigbee device comes back online."""
+	try:
+		payload = json.loads(msg.payload)
+		state = payload.get('state', '')
+	except (json.JSONDecodeError, ValueError):
+		state = msg.payload.decode('utf-8').strip()
+
+	if state != 'online':
+		return
+
+	device_name = msg.topic.split('/')[1]
+	set_topic = f'z2mq/{device_name}/set'
+	stored_state = device_state.get_state(set_topic)
+	if stored_state:
+		logger.info("Device %s came online - replaying stored state: %s", device_name, stored_state)
+		client.publish(set_topic, stored_state)
 
 def on_scheduled(intent, command):
 	logger.info("Running scheduled job:  %s - %s" % (intent, command))
