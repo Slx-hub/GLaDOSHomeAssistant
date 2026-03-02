@@ -45,7 +45,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe("hermes/asr/textCaptured")
 	client.subscribe("hermes/intent/#")
 	client.subscribe("hermes/nlu/intentNotRecognized")
-	client.subscribe("z2mq/+/availability")
+	client.subscribe("z2mq/bridge/event")
 	logger.info("Connected!!")
 
 
@@ -56,8 +56,8 @@ def on_disconnect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
 	"""Called each time a message is received on a subscribed topic."""
-	if msg.topic.startswith('z2mq/') and msg.topic.endswith('/availability'):
-		handle_device_availability(client, msg)
+	if msg.topic == 'z2mq/bridge/event':
+		handle_bridge_event(client, msg)
 		return
 
 	payload = json.loads(msg.payload)
@@ -73,22 +73,24 @@ def on_message(client, userdata, msg):
 
 	handle_reply(reply, True, False)
 
-def handle_device_availability(client, msg):
-	"""Replay stored state when a Zigbee device comes back online."""
+def handle_bridge_event(client, msg):
+	"""Replay stored state when a Zigbee device announces itself."""
 	try:
 		payload = json.loads(msg.payload)
-		state = payload.get('state', '')
 	except (json.JSONDecodeError, ValueError):
-		state = msg.payload.decode('utf-8').strip()
-
-	if state != 'online':
 		return
 
-	device_name = msg.topic.split('/')[1]
+	if payload.get('type') != 'device_announce':
+		return
+
+	device_name = payload.get('data', {}).get('friendly_name')
+	if not device_name:
+		return
+
 	set_topic = f'z2mq/{device_name}/set'
 	stored_state = device_state.get_state(set_topic)
 	if stored_state:
-		logger.info("Device %s came online - replaying stored state: %s", device_name, stored_state)
+		logger.info("Device %s announced - replaying stored state: %s", device_name, stored_state)
 		client.publish(set_topic, stored_state)
 
 def on_scheduled(intent, command):
@@ -144,6 +146,7 @@ def publish(reply, is_scheduled):
 				if device_state.update_base(topic, payload):
 					client.publish(topic, payload)
 			else:
+				device_state.update_base(topic, payload)
 				client.publish(topic, payload)
 
 			if i < len(reply.mqtt_topic) - 1:
