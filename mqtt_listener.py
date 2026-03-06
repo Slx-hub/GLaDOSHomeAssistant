@@ -5,6 +5,8 @@ import json, yaml
 from datetime import datetime
 from multiprocessing import Process
 from time import sleep
+from queue import Queue
+from threading import Thread
 
 from lib.I_intent_receiver import Intent
 from lib.I_intent_receiver import Reply
@@ -73,6 +75,33 @@ def on_message(client, userdata, msg):
 
 	handle_reply(reply, True, False)
 
+# ── MQTT publish queue ──────────────────────────────────────────
+# Zigbee coordinators can drop commands when messages arrive
+# back-to-back.  This queue serialises all zigbee publishes
+# with a short delay between each one.
+PUBLISH_DELAY = 0.2          # seconds between consecutive publishes
+_publish_queue = Queue()
+
+def _publish_worker():
+	"""Drain the publish queue, spacing messages apart."""
+	while True:
+		topic, payload = _publish_queue.get()
+		try:
+			logger.info("Publishing: %s -> %s", topic, payload)
+			client.publish(topic, payload)
+		except Exception as e:
+			logger.info("Publish failed: %s", e)
+		finally:
+			_publish_queue.task_done()
+		sleep(PUBLISH_DELAY)
+
+_publish_thread = Thread(target=_publish_worker, daemon=True)
+_publish_thread.start()
+
+def enqueue_publish(topic, payload):
+	"""Queue an MQTT publish to be sent by the worker thread."""
+	_publish_queue.put((topic, payload))
+
 def handle_bridge_event(client, msg):
 	"""Replay stored state when a Zigbee device announces itself."""
 	try:
@@ -90,8 +119,8 @@ def handle_bridge_event(client, msg):
 	set_topic = f'z2mq/{device_name}/set'
 	stored_state = device_state.get_state(set_topic)
 	if stored_state:
-		logger.info("Device %s announced - replaying stored state: %s", device_name, stored_state)
-		client.publish(set_topic, stored_state)
+		logger.info("Device %s announced - queuing replay", device_name)
+		enqueue_publish(set_topic, stored_state)
 
 def on_scheduled(intent, command):
 	logger.info("Running scheduled job:  %s - %s" % (intent, command))
@@ -138,19 +167,16 @@ def publish(reply, is_scheduled):
 			if payload == "<release-override>":
 				base = device_state.clear_override(topic)
 				if base:
-					client.publish(topic, base)
+					enqueue_publish(topic, base)
 			elif reply.is_user_override:
 				device_state.set_override(topic, payload)
-				client.publish(topic, payload)
+				enqueue_publish(topic, payload)
 			elif is_scheduled:
 				if device_state.update_base(topic, payload):
-					client.publish(topic, payload)
+					enqueue_publish(topic, payload)
 			else:
 				device_state.update_base(topic, payload)
-				client.publish(topic, payload)
-
-			if i < len(reply.mqtt_topic) - 1:
-				sleep(reply.mqtt_request_delay)
+				enqueue_publish(topic, payload)
 
 def handle_message(client, topic, payload):
 

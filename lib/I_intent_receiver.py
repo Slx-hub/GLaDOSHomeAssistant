@@ -24,7 +24,6 @@ class Reply:
 	neopixel_color: List = field(default_factory=lambda: [0b11111111, 0, 0, 0, 0, 0])
 	tts_reply: str = ""
 	next_intent: str = ""
-	mqtt_request_delay: float = 0.0
 	mqtt_topic: List = field(default_factory=lambda: [])
 	mqtt_payload: List = field(default_factory=lambda: [])
 	is_user_override: bool = False
