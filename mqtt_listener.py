@@ -79,7 +79,7 @@ def on_message(client, userdata, msg):
 # Zigbee coordinators can drop commands when messages arrive
 # back-to-back.  This queue serialises all zigbee publishes
 # with a short delay between each one.
-PUBLISH_DELAY = 0.2          # seconds between consecutive publishes
+PUBLISH_DELAY = 0.1          # seconds between consecutive publishes
 _publish_queue = Queue()
 
 def _publish_worker():
