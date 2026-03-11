@@ -98,9 +98,16 @@ def _publish_worker():
 _publish_thread = Thread(target=_publish_worker, daemon=True)
 _publish_thread.start()
 
-def enqueue_publish(topic, payload):
-	"""Queue an MQTT publish to be sent by the worker thread."""
-	_publish_queue.put((topic, payload))
+def enqueue_publish(topic, payload, direct=False):
+	"""Queue an MQTT publish to be sent by the worker thread.
+
+	Pass direct=True when calling from the scheduler child process, where
+	the worker thread does not exist (threads don't survive fork).
+	"""
+	if direct:
+		client.publish(topic, payload)
+	else:
+		_publish_queue.put((topic, payload))
 
 def handle_bridge_event(client, msg):
 	"""Replay stored state when a Zigbee device announces itself."""
@@ -167,13 +174,13 @@ def publish(reply, is_scheduled):
 			if payload == "<release-override>":
 				base = device_state.clear_override(topic)
 				if base:
-					enqueue_publish(topic, base)
+					enqueue_publish(topic, base, direct=is_scheduled)
 			elif reply.is_user_override:
 				device_state.set_override(topic, payload)
-				enqueue_publish(topic, payload)
+				enqueue_publish(topic, payload, direct=is_scheduled)
 			elif is_scheduled:
 				if device_state.update_base(topic, payload):
-					enqueue_publish(topic, payload)
+					enqueue_publish(topic, payload, direct=True)
 			else:
 				device_state.update_base(topic, payload)
 				enqueue_publish(topic, payload)
