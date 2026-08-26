@@ -14,6 +14,11 @@ After forgetting which type of Arduino controlled the leds, along with a wrong g
 - Led array is NeoPixel Jewel 7
 - Led libary is Adafruit NeoPixel (1.12.3)
 
+## Energy
+
+The grid power meter poller lives in [meter/](meter/) — standalone service
+(own venv, own systemd unit, `energie/` MQTT namespace), see its README.
+
 ## Manual
 
 This section is not a setup guide but rather acts as a reference for when i have once again no clue of what i've done 4 months ago

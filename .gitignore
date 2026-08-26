@@ -3,3 +3,5 @@
 *.log
 logs/*
 .vscode/*
+meter/venv/
+__pycache__/

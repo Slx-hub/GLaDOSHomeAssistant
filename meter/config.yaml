@@ -1,0 +1,39 @@
+# meter.service configuration — no secrets in here!
+# The box password comes from the FRITZBOX_PASSWORD env var
+# (systemd EnvironmentFile /etc/meter.env, mode 0600) or from password_file.
+
+fritzbox:
+  host: 192.168.178.1        # IP on purpose, never rely on fritz.box resolving
+  user: meter                # box user account with Smart Home permission
+  password_file: null        # alternative to FRITZBOX_PASSWORD, path outside the repo
+  ain: null                  # AIN of the Energy 250; null = first powermeter device
+  use_https: false
+  verify_tls: false
+  timeout_s: 10.0
+  login_backoff_initial_s: 10.0
+  login_backoff_max_s: 900.0
+  # --- UNVERIFIED for the Energy 250, see spec section 2 -------------------
+  # Defaults are the FRITZ!DECT 200 units (power mW, energy Wh). Verify with
+  # --dump-raw against the meter display before trusting any published value.
+  power_scale: 0.001         # raw -> W
+  energy_scale: 0.001        # raw -> kWh
+  invert_sign: false         # flip if feed-in shows the wrong sign
+  export_element: null       # XML element carrying counter 2.8.0, once known
+  # -------------------------------------------------------------------------
+
+poll:
+  interval_s: 10.0           # throttle towards the measured send period once known
+  stale_after_s: 180.0       # no change for this long -> stale: true, controller freezes I share
+
+mqtt:
+  host: localhost
+  port: 1883
+  keepalive_s: 30            # bounds how fast the LWT flips status to offline after kill -9
+  topic_prefix: energie      # separate namespace from hermes/ (Rhasspy)
+  client_id: meter-service
+
+simulate:
+  send_period_s: 60.0        # simulated device update period (real one: measure, spec section 2)
+  base_load_w: 180.0
+  pv_peak_w: 2500.0          # set 0 to disable simulated feed-in
+  seed: null

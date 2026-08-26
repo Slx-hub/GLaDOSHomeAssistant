@@ -1,0 +1,18 @@
+[Unit]
+Description=Grid power meter poller (FRITZ Smart Energy 250 -> MQTT)
+# Deliberately no dependency on the Rhasspy stack — this service keeps
+# running while the voice system is being worked on.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=pi
+EnvironmentFile=/etc/meter.env
+WorkingDirectory=/home/pi/GLaDOSHomeAssistant/meter
+ExecStart=/home/pi/GLaDOSHomeAssistant/meter/venv/bin/python /home/pi/GLaDOSHomeAssistant/meter/meter_service.py
+
+[Install]
+WantedBy=multi-user.target
