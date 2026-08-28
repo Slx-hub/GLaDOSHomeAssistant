@@ -63,6 +63,20 @@ history:
                              # 1-hour buffer and lose that data for good.
   db_path: /home/pi/GLaDOSHomeAssistant/meter/data/history.db
 
+# Failure notifications to ntfy (self-hosted). Edge-triggered: one message when
+# a condition has persisted long enough to be real, one when it clears, nothing
+# in between -- the poll loop runs every 5s, so anything else would be a storm.
+# The URL contains the topic name, which IS the access credential, so it lives
+# in /etc/meter.env as NTFY_URL and never in this file.
+notify:
+  enabled: true
+  url: null                  # null => NTFY_URL from the environment
+  min_duration_s: 60.0       # a failure must persist this long ...
+  min_count: 5               # ... or recur this often, before anything is sent
+  timeout_s: 10.0
+  max_per_hour: 12           # backstop against a notification storm
+  notify_recovery: true      # also send the "back to normal" message
+
 simulate:
   send_period_s: 60.0        # simulated device update period (real one: measure, spec section 2)
   base_load_w: 180.0

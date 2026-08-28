@@ -204,6 +204,51 @@ data. Days are local calendar days (Europe/Berlin); storage stays UTC.
 | `GET /api/day?date=YYYY-MM-DD` | 5-min series + summary + the local-day window |
 | `GET /api/summary[?from=&to=]` | averages; **no range = all data** |
 
+## Failure notifications (ntfy)
+
+Failures go to a self-hosted ntfy topic over **HTTP** — deliberately not through
+MQTT, so a dead broker is still reportable. `notify` in `config.yaml`.
+
+The URL contains the topic name, which **is** the access credential (anyone
+holding it can read and post), so it lives in `/etc/meter.env` as `NTFY_URL`
+and never in this repo. Unset it to disable notifications; failures still go to
+the journal either way.
+
+```bash
+python meter_service.py --test-notify    # send one test message and exit
+```
+
+### What gets reported
+
+| Key | Condition | Priority |
+|---|---|---|
+| `login` | box login rejected — needs a human, never self-heals | urgent |
+| `poll` | box unreachable / device absent / unparseable | high |
+| `stale` | no fresh measurement (fuse: 300s, above normal power saving) | high |
+| `history` | history recording failing | high |
+| `mqtt` | broker disconnected | high |
+| `keep_awake` | keep-awake poke failing | default |
+| — | history gap: data lost for good (one-shot `event`) | default |
+
+### Why you will not get spammed
+
+The poll loop runs every 5s, so a box outage would otherwise produce ~720
+messages an hour. Alerts are **edge-triggered per key**:
+
+* A condition must persist `min_duration_s` (60s) **or** recur `min_count` (5)
+  times before anything is sent — so a SID expiry or a WiFi blip stays silent.
+* Exactly **one** message per outage, however long it lasts.
+* Exactly **one** recovery message, and only if a failure was actually
+  announced. A condition that never alerted never sends an "all clear".
+* `max_per_hour` (12) is a hard backstop; drops are counted in `diag`.
+
+Verified against a blackholed box IP: 9 consecutive poll errors produced 1
+notification.
+
+Sending runs on a daemon thread behind a bounded queue. A full queue drops
+rather than blocks, and every transport error is swallowed — a broken notifier
+must never become a measurement outage.
+
 ## Commissioning checklist
 
 Worked through on 2026-08-28 — kept for the next device/meter.

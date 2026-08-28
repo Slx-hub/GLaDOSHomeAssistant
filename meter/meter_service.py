@@ -35,6 +35,7 @@ from common import (MeterReading, ReplayDone, SourceError,
                     iso_z, jlog, setup_logging, utcnow)
 from fritz_source import FritzSession, FritzSource, LoginBlocked, parse_devicelist
 from history import HistoryRecorder
+from notify import Notifier, PRIO_HIGH, PRIO_URGENT, PRIO_DEFAULT
 from sim_source import ReplaySource, SimulateSource
 
 DEFAULTS = {
@@ -84,6 +85,18 @@ DEFAULTS = {
         "retry_s": 60.0,              # after a FAILED poll — must not burn the interval
         "db_path": "/home/pi/GLaDOSHomeAssistant/meter/data/history.db",
     },
+    # Failure notifications to ntfy. The URL contains the topic name, which is
+    # itself the access credential -> it comes from the NTFY_URL env var
+    # (/etc/meter.env, mode 0600), never from this file.
+    "notify": {
+        "enabled": True,
+        "url": None,                  # None => NTFY_URL env var
+        "min_duration_s": 60.0,       # a failure must persist this long ...
+        "min_count": 5,               # ... or recur this often, before alerting
+        "timeout_s": 10.0,
+        "max_per_hour": 12,           # backstop against a notification storm
+        "notify_recovery": True,
+    },
     "simulate": {
         "send_period_s": 60.0,
         "base_load_w": 180.0,
@@ -117,6 +130,11 @@ def resolve_password(fritz_cfg: dict) -> str:
         raise SystemExit("FRITZBOX_PASSWORD not set and no password_file configured — "
                          "refusing to start (see setup_files/meter.env.example)")
     return password
+
+
+def resolve_ntfy_url(notify_cfg: dict) -> Optional[str]:
+    # Same rule as the box password: the secret lives outside the repo.
+    return notify_cfg.get("url") or os.environ.get("NTFY_URL")
 
 
 class FreshnessTracker:
@@ -231,6 +249,7 @@ class MqttPublisher:
 
         # Set by main() before connecting; called from the paho network thread.
         self.on_keep_awake_cmd = None
+        self.notifier = None
 
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                    client_id=cfg["client_id"])
@@ -262,6 +281,8 @@ class MqttPublisher:
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         jlog(logging.INFO, "mqtt_connected", reason=str(reason_code))
         client.publish(self.topic_status, "online", qos=1, retain=True)
+        if self.notifier is not None:
+            self.notifier.resolved("mqtt", title="meter: MQTT broker reconnected")
         # Re-subscribe on every (re)connect. A retained command is redelivered
         # here, so the desired state survives a restart of this service without
         # the battery manager having to republish.
@@ -283,6 +304,10 @@ class MqttPublisher:
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         jlog(logging.WARNING, "mqtt_disconnected", reason=str(reason_code))
+        # Reportable because notifications go over HTTP, not through the broker.
+        if self.notifier is not None:
+            self.notifier.failure("mqtt", "meter: MQTT broker disconnected",
+                                  f"reason: {reason_code}", tags="electric_plug")
 
     def publish_power(self, payload: dict):
         self._client.publish(self.topic_power, json.dumps(payload), qos=0, retain=True)
@@ -325,7 +350,8 @@ def build_power_payload(reading: MeterReading, fresh: bool, stale: bool,
 def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
              record_path: Optional[str], interval_s: float,
              keep_awake: Optional["KeepAwake"] = None,
-             history: Optional[HistoryRecorder] = None):
+             history: Optional[HistoryRecorder] = None,
+             notifier: Optional[Notifier] = None):
     tracker = FreshnessTracker(cfg["poll"]["stale_after_s"])
     login_failures = lambda: getattr(getattr(source, "session", None), "login_failures", 0)
     backoff_s = lambda: getattr(getattr(source, "session", None), "backoff_remaining_s", 0.0)
@@ -356,6 +382,21 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
         if reading is not None:
             fresh = tracker.update(reading, now)
             stale = tracker.is_stale(now)
+            if notifier is not None:
+                notifier.resolved("poll", title="meter: box reachable again")
+                # stale needs a longer fuse than a poll error: the device
+                # legitimately goes quiet for ~120s in power saving, and holds
+                # of ~240s have been observed at mode transitions.
+                if stale:
+                    notifier.failure(
+                        "stale", "meter: no fresh measurement",
+                        f"last change {int((now - tracker.ts_measured).total_seconds())}s ago "
+                        f"(stale_after_s={cfg['poll']['stale_after_s']:.0f}); "
+                        "the I share should be frozen",
+                        priority=PRIO_HIGH, tags="hourglass",
+                        min_duration_s=300.0)
+                else:
+                    notifier.resolved("stale", title="meter: measurements fresh again")
             publisher.publish_power(
                 build_power_payload(reading, fresh, stale, tracker.ts_measured, now))
             if fresh:
@@ -378,6 +419,18 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
                 record_file.flush()
         else:
             jlog(logging.ERROR, "poll_error", error=error)
+            if notifier is not None:
+                # Credential problems are separated out: they never fix
+                # themselves and need a human, so they go out at urgent.
+                if "login rejected" in (error or "") or login_failures() > 0:
+                    notifier.failure("login", "meter: FRITZ!Box login rejected",
+                                     f"{error}\ncheck FRITZBOX_PASSWORD and the "
+                                     f"'Smart Home' permission "
+                                     f"(login_failures={login_failures()})",
+                                     priority=PRIO_URGENT, tags="rotating_light")
+                else:
+                    notifier.failure("poll", "meter: poll failing", error or "unknown",
+                                     priority=PRIO_HIGH, tags="warning")
             # Re-publish the last known value with an updated stale flag so
             # the controller can freeze its I share even while the box is away.
             last = tracker.last_reading
@@ -397,8 +450,25 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
             diag["keep_awake"] = keep_awake.enabled
             if keep_awake.last_error is not None:
                 diag["keep_awake_error"] = keep_awake.last_error
-        if history is not None and history.last_error is not None:
-            diag["history_error"] = history.last_error
+            if notifier is not None:
+                if keep_awake.last_error is not None:
+                    notifier.failure("keep_awake", "meter: keep-awake poke failing",
+                                     keep_awake.last_error, priority=PRIO_DEFAULT,
+                                     tags="warning")
+                elif keep_awake.enabled:
+                    notifier.resolved("keep_awake")
+        if history is not None:
+            if history.last_error is not None:
+                diag["history_error"] = history.last_error
+            if notifier is not None:
+                if history.last_error is not None:
+                    notifier.failure("history", "meter: history recording failing",
+                                     history.last_error, priority=PRIO_HIGH,
+                                     tags="floppy_disk")
+                else:
+                    notifier.resolved("history", title="meter: history recording OK")
+        if notifier is not None and notifier.dropped:
+            diag["notify_dropped"] = notifier.dropped
         publisher.publish_diag({"event": "poll", **diag})
         jlog(logging.DEBUG, "poll", **diag)
 
@@ -460,6 +530,8 @@ def main() -> int:
                         help="append raw XML responses as JSONL while polling")
     parser.add_argument("--dump-raw", action="store_true",
                         help="fetch raw responses once, print to stdout, no MQTT")
+    parser.add_argument("--test-notify", action="store_true",
+                        help="send one test notification to ntfy and exit")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -468,6 +540,20 @@ def main() -> int:
 
     if args.dump_raw:
         return dump_raw(cfg)
+
+    if args.test_notify:
+        url = resolve_ntfy_url(cfg["notify"])
+        if not url:
+            print("NTFY_URL not set (and notify.url is null) — nothing to test")
+            return 1
+        print(f"posting to {url.rsplit('/', 1)[0]}/<topic>")
+        n = Notifier({**cfg["notify"], "enabled": True}, url)
+        n.event("meter: test notification",
+                "If you can read this, failure notifications work.",
+                priority=PRIO_DEFAULT, tags="white_check_mark")
+        n.shutdown()
+        print(f"sent={n.sent} dropped={n.dropped}")
+        return 0 if n.sent else 1
 
     interval_s = cfg["poll"]["interval_s"]
     if args.simulate:
@@ -507,6 +593,12 @@ def main() -> int:
          interval_s=interval_s, stale_after_s=cfg["poll"]["stale_after_s"])
     keep_awake = KeepAwake(cfg["keep_awake"])
     history = HistoryRecorder(cfg["history"])
+    ntfy_url = resolve_ntfy_url(cfg["notify"])
+    notifier = Notifier(cfg["notify"], ntfy_url)
+    if cfg["notify"]["enabled"] and not ntfy_url:
+        jlog(logging.WARNING, "notify_disabled",
+             detail="NTFY_URL not set — failures will only appear in the journal")
+    history.notifier = notifier
 
     publisher = MqttPublisher(cfg["mqtt"])
 
@@ -514,6 +606,7 @@ def main() -> int:
         if keep_awake.set_enabled(on):
             publisher.publish_keep_awake(on)
 
+    publisher.notifier = notifier
     if keep_awake.allow_mqtt_toggle:
         publisher.on_keep_awake_cmd = handle_keep_awake_cmd
     # Publish the configured default first; a retained command arriving on
@@ -523,10 +616,11 @@ def main() -> int:
 
     try:
         run_loop(source, publisher, cfg, stop, args.record, interval_s,
-                 keep_awake, history)
+                 keep_awake, history, notifier)
     finally:
         history.close()
         publisher.shutdown()
+        notifier.shutdown()
         jlog(logging.INFO, "service_stop")
     return 0
 

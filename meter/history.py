@@ -141,6 +141,7 @@ class HistoryRecorder:
         # interval. The pi reboots nightly; the box buffer covers an hour, so
         # polling at once on startup means a short outage loses nothing.
         self._next_poll = 0.0
+        self.notifier = None          # set by main(); optional
         self._conn: Optional[sqlite3.Connection] = None
         self.polls = 0
         self.rows_written = 0
@@ -199,6 +200,15 @@ class HistoryRecorder:
                 jlog(logging.WARNING, "history_gap", since_last_success_s=round(gap),
                      buffer_s=BUFFER_SPAN_S,
                      detail="offline longer than the box buffer — that data is gone")
+                if self.notifier is not None:
+                    # A one-shot event, not a state: the data is already lost,
+                    # so there is nothing to "recover" from later.
+                    self.notifier.event(
+                        "meter: history gap — data lost",
+                        f"no successful history poll for {round(gap/60)} min, but the "
+                        f"box only buffers {BUFFER_SPAN_S//60} min.\n"
+                        f"That stretch is gone for good.",
+                        tags="warning")
         except Exception as e:
             # History is a side channel; never let it break the measurement path.
             self._next_poll = now + self.retry_s
