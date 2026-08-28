@@ -22,12 +22,16 @@ class Zigbee(Receiver):
                 sources = settings["ReceiverGroups"][intent.slots["source"]]
             for source in sources:
                 reply_topic.append('z2mq/' + source + '/set')
-                reply_payload.append('{"state":"' + intent.slots["state"] + '",' + settings["ReceiverProperties"][source][mode] + '}')
+                property_value = settings["ReceiverProperties"][source][mode]
+                if property_value == 'off':
+                    reply_payload.append('{"state":"off", "brightness":0}')
+                else:
+                    reply_payload.append('{' + property_value + ',"state":"' + intent.slots["state"] + '"}')
         
         if intent.intent == "VRMode":
             is_user_override = True
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set','z2mq/socketvive/set','z2mq/socketlh1/set','z2mq/socketlh2/set']
-            reply_payload = ['{"state":"off"}','{"state":"on","brightness":2,"color_mode":"xy","color":{"x":0.1459,"y":0.2382}}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
+            reply_payload = ['{"state":"off"}','{"state":"off"}','{"state":"on"}','{"state":"on"}','{"state":"on"}']
         if intent.intent == "CineMode":
             is_user_override = True
             reply_topic = ['z2mq/couchlamp/set','z2mq/showcase/set']

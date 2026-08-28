@@ -36,8 +36,8 @@
       - 'bedlightr'
       - 'bedlightl'
       'bathroom':
-      - 'bathroom1'
-      - 'bathroom2'
+      - 'bathroom_dim'
+      - 'bathroom_full'
     'ReceiverProperties':
       'showcase':
         'default': '"brightness":100,"color_mode":"color_temp","color_temp":250'
@@ -54,10 +54,10 @@
         'default': '"brightness":80'
         'dim': '"brightness":10'
         'full': '"brightness":250'
-      'bathroom1':
+      'bathroom_full':
         'default': '"brightness":250'
-        'dim': '"brightness":0'
-      'bathroom2':
+        'dim': 'off'
+      'bathroom_dim':
         'default': '"brightness":250'
         'dim': '"brightness":50'
     'ResponseMap':
@@ -76,7 +76,7 @@
       'scheduled_reminder_pills': 'special/reminder/pills.wav'
       'scheduled_reminder_go_dark': 'special/reminder/go_dark'
   'Alarm':
-    'armed': !!bool 'true'
+    'armed': !!bool 'false'
 'SchedulerSettings':
   'daily':
     '<sunset>': '10%-Alias> scheduled_lavalamp_on'

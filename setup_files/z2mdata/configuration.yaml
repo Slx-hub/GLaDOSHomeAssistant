@@ -56,12 +56,12 @@ devices:
     friendly_name: '0xa4c13896e74e6997'
   '0xa4c138d33a3d90f7':
     friendly_name: lavalamp
-  '0xa4c1384c87b1c643':
-    friendly_name: bathroom1
-  '0xa4c1389e08f92ccc':
-    friendly_name: bathroom2
   '0xa4c138f000925c5f':
     friendly_name: printer
+  '0xa4c1384c87b1c643':
+    friendly_name: bathroom_dim
+  '0xa4c1385a59a8deb0':
+    friendly_name: bathroom_full
 groups:
   '1':
     friendly_name: Thermometers
