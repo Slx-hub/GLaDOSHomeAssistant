@@ -5,3 +5,4 @@ logs/*
 .vscode/*
 meter/venv/
 __pycache__/
+meter/data/

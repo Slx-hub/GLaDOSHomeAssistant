@@ -47,6 +47,22 @@ keep_awake:
   interval_s: 60.0           # must stay well under the ~126s hold
   allow_mqtt_toggle: true    # honour <topic_prefix>/cmd/keep_awake
 
+# 5-minute power history, recorded from the box's own 1-hour statistics buffer
+# rather than from our MQTT stream: polling every 30 min against a 60 min
+# buffer gives 2x overlap, so data recorded while this service was down is
+# still picked up. Served by meter-history.service.
+# NOTE: reading that buffer is also the keep-awake trigger, so each poll holds
+# the device in 10s mode for ~2 min (~7% duty cycle at 30 min intervals).
+history:
+  enabled: true
+  interval_s: 1800.0         # 30 min against the 60 min buffer
+  retry_s: 60.0              # retry gap after a FAILED poll. Deliberately short:
+                             # the first poll after the nightly reboot can fail
+                             # while the network comes up, and waiting a full
+                             # interval could push the next read past the
+                             # 1-hour buffer and lose that data for good.
+  db_path: /home/pi/GLaDOSHomeAssistant/meter/data/history.db
+
 simulate:
   send_period_s: 60.0        # simulated device update period (real one: measure, spec section 2)
   base_load_w: 180.0

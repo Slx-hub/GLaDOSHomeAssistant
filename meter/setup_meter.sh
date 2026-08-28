@@ -17,10 +17,14 @@ if [ ! -f /etc/meter.env ]; then
 fi
 sudo chmod 600 /etc/meter.env
 
-echo "Enabling meter.service..."
+echo "Creating history data dir..."
+mkdir -p data
+
+echo "Enabling meter.service and meter-history.service..."
 # enable-by-path links and enables in one step and succeeds on re-run,
 # unlike `systemctl link` which fails once the link exists
 sudo systemctl enable "$(pwd)/../setup_files/meter.service"
+sudo systemctl enable "$(pwd)/../setup_files/meter-history.service"
 sudo systemctl daemon-reload
 
 if sudo grep -q '^FRITZBOX_PASSWORD=changeme$' /etc/meter.env; then
@@ -35,4 +39,6 @@ if sudo grep -q '^FRITZBOX_PASSWORD=changeme$' /etc/meter.env; then
 else
     echo "Restarting meter.service..."
     sudo systemctl restart meter.service
+    echo "Restarting meter-history.service..."
+    sudo systemctl restart meter-history.service
 fi

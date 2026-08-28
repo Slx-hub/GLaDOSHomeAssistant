@@ -34,6 +34,7 @@ import yaml
 from common import (MeterReading, ReplayDone, SourceError,
                     iso_z, jlog, setup_logging, utcnow)
 from fritz_source import FritzSession, FritzSource, LoginBlocked, parse_devicelist
+from history import HistoryRecorder
 from sim_source import ReplaySource, SimulateSource
 
 DEFAULTS = {
@@ -73,6 +74,15 @@ DEFAULTS = {
         "enabled": False,             # initial state before any MQTT command arrives
         "interval_s": 60.0,           # hold expires ~126s after the last poke (measured)
         "allow_mqtt_toggle": True,    # honour <prefix>/cmd/keep_awake
+    },
+    # 5-minute power history recorded from the box's own 1-hour statistics
+    # buffer (see history.py). Polling every 30 min gives 2x overlap, so gaps
+    # while this service was down are recovered.
+    "history": {
+        "enabled": True,
+        "interval_s": 1800.0,         # 30 min against a 60 min buffer
+        "retry_s": 60.0,              # after a FAILED poll — must not burn the interval
+        "db_path": "/home/pi/GLaDOSHomeAssistant/meter/data/history.db",
     },
     "simulate": {
         "send_period_s": 60.0,
@@ -314,7 +324,8 @@ def build_power_payload(reading: MeterReading, fresh: bool, stale: bool,
 
 def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
              record_path: Optional[str], interval_s: float,
-             keep_awake: Optional["KeepAwake"] = None):
+             keep_awake: Optional["KeepAwake"] = None,
+             history: Optional[HistoryRecorder] = None):
     tracker = FreshnessTracker(cfg["poll"]["stale_after_s"])
     login_failures = lambda: getattr(getattr(source, "session", None), "login_failures", 0)
     backoff_s = lambda: getattr(getattr(source, "session", None), "backoff_remaining_s", 0.0)
@@ -325,6 +336,8 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
         started = utcnow()
         if keep_awake is not None:
             keep_awake.tick(source)
+        if history is not None:
+            history.tick(source)
         reading = None
         error = None
         try:
@@ -384,6 +397,8 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
             diag["keep_awake"] = keep_awake.enabled
             if keep_awake.last_error is not None:
                 diag["keep_awake_error"] = keep_awake.last_error
+        if history is not None and history.last_error is not None:
+            diag["history_error"] = history.last_error
         publisher.publish_diag({"event": "poll", **diag})
         jlog(logging.DEBUG, "poll", **diag)
 
@@ -491,6 +506,7 @@ def main() -> int:
     jlog(logging.INFO, "service_start", mode=source.name,
          interval_s=interval_s, stale_after_s=cfg["poll"]["stale_after_s"])
     keep_awake = KeepAwake(cfg["keep_awake"])
+    history = HistoryRecorder(cfg["history"])
 
     publisher = MqttPublisher(cfg["mqtt"])
 
@@ -506,8 +522,10 @@ def main() -> int:
     publisher.start()
 
     try:
-        run_loop(source, publisher, cfg, stop, args.record, interval_s, keep_awake)
+        run_loop(source, publisher, cfg, stop, args.record, interval_s,
+                 keep_awake, history)
     finally:
+        history.close()
         publisher.shutdown()
         jlog(logging.INFO, "service_stop")
     return 0

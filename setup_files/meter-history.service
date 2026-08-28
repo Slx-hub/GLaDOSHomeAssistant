@@ -1,0 +1,17 @@
+[Unit]
+Description=Power history web UI (5-minute averages from the FRITZ!Box buffer)
+# Reads the SQLite file written by meter.service, read-only. No hard dependency:
+# the UI is useful even while the recorder is stopped.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=pi
+WorkingDirectory=/home/pi/GLaDOSHomeAssistant/meter
+ExecStart=/home/pi/GLaDOSHomeAssistant/meter/venv/bin/python /home/pi/GLaDOSHomeAssistant/meter/history_web.py
+
+[Install]
+WantedBy=multi-user.target
