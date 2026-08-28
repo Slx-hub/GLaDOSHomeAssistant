@@ -17,7 +17,7 @@ After forgetting which type of Arduino controlled the leds, along with a wrong g
 ## Energy
 
 The grid power meter poller lives in [meter/](meter/) — standalone service
-(own venv, own systemd unit, `energie/` MQTT namespace), see its README.
+(own venv, own systemd unit, `powermeter/` MQTT namespace), see its README.
 
 ## Manual
 

@@ -11,10 +11,10 @@ Standalone: own venv, own systemd unit, no dependency on the Rhasspy stack.
 
 | Topic | Retain | QoS | Content |
 |---|---|---|---|
-| `energie/netz/leistung` | yes | 0 | `{watt, ts_measured, ts_polled, fresh, stale, source}` |
-| `energie/netz/zaehlerstand` | yes | 1 | `{import_kwh, export_kwh, ts_measured, source}` |
-| `energie/meter/status` | yes | 1 | `online` / `offline` (LWT) |
-| `energie/meter/diag` | no | 0 | poll timings, login failures, backoff state |
+| `powermeter/data/power` | yes | 0 | `{watt, ts_measured, ts_polled, fresh, stale, source}` |
+| `powermeter/data/energy` | yes | 1 | `{import_kwh, export_kwh, ts_measured, source}` |
+| `powermeter/health/status` | yes | 1 | `online` / `offline` (LWT) |
+| `powermeter/health/diag` | no | 0 | poll timings, login failures, backoff state |
 
 Sign: **positive = Netzbezug, negative = Einspeisung.**
 

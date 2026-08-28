@@ -8,11 +8,11 @@ control loop stopping — it only gets less accurate.
 The MQTT contract (topics and payloads below) is the stable part; the data
 source is the exchangeable part. See --simulate / --replay / --dump-raw.
 
-Topics (prefix configurable, default "energie"):
-    energie/netz/leistung       retain, QoS 0   power JSON (see build_power_payload)
-    energie/netz/zaehlerstand   retain, QoS 1   import_kwh / export_kwh
-    energie/meter/status        retain, QoS 1   online / offline (LWT)
-    energie/meter/diag          no retain, QoS 0  poll timings, login failures, backoff
+Topics (prefix configurable, default "powermeter"):
+    powermeter/data/power       retain, QoS 0   power JSON (see build_power_payload)
+    powermeter/data/energy      retain, QoS 1   import_kwh / export_kwh
+    powermeter/health/status    retain, QoS 1   online / offline (LWT)
+    powermeter/health/diag      no retain, QoS 0  poll timings, login failures, backoff
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ DEFAULTS = {
         "host": "localhost",
         "port": 1883,
         "keepalive_s": 30,            # bounds how fast the LWT fires after kill -9
-        "topic_prefix": "energie",
+        "topic_prefix": "powermeter",
         "client_id": "meter-service",
     },
     "simulate": {
@@ -137,10 +137,10 @@ class FreshnessTracker:
 class MqttPublisher:
     def __init__(self, cfg: dict):
         prefix = cfg["topic_prefix"]
-        self.topic_power = f"{prefix}/netz/leistung"
-        self.topic_energy = f"{prefix}/netz/zaehlerstand"
-        self.topic_status = f"{prefix}/meter/status"
-        self.topic_diag = f"{prefix}/meter/diag"
+        self.topic_power = f"{prefix}/data/power"
+        self.topic_energy = f"{prefix}/data/energy"
+        self.topic_status = f"{prefix}/health/status"
+        self.topic_diag = f"{prefix}/health/diag"
 
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                    client_id=cfg["client_id"])

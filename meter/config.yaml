@@ -4,7 +4,7 @@
 
 fritzbox:
   host: 192.168.178.1        # IP on purpose, never rely on fritz.box resolving
-  user: meter                # box user account with Smart Home permission
+  user: Glados               # box user account with Smart Home permission
   password_file: null        # alternative to FRITZBOX_PASSWORD, path outside the repo
   ain: null                  # AIN of the Energy 250; null = first powermeter device
   use_https: false
@@ -29,7 +29,7 @@ mqtt:
   host: localhost
   port: 1883
   keepalive_s: 30            # bounds how fast the LWT flips status to offline after kill -9
-  topic_prefix: energie      # separate namespace from hermes/ (Rhasspy)
+  topic_prefix: powermeter   # separate namespace from hermes/ (Rhasspy)
   client_id: meter-service
 
 simulate:
