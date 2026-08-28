@@ -6,7 +6,7 @@ fritzbox:
   host: 192.168.178.1        # IP on purpose, never rely on fritz.box resolving
   user: Glados               # box user account with Smart Home permission
   password_file: null        # alternative to FRITZBOX_PASSWORD, path outside the repo
-  ain: null                  # AIN of the Energy 250; null = first powermeter device
+  ain: "15282 0921804-1"     # sub-unit carries <powermeter>; the bare AIN does not
   use_https: false
   verify_tls: false
   timeout_s: 10.0
@@ -22,8 +22,8 @@ fritzbox:
   # -------------------------------------------------------------------------
 
 poll:
-  interval_s: 10.0           # throttle towards the measured send period once known
-  stale_after_s: 180.0       # no change for this long -> stale: true, controller freezes I share
+  interval_s: 5.0            # device sends every 10s; poll faster so no update is missed
+  stale_after_s: 180.0       # measured: the device pauses transmitting for up to 120s in power saving mode
 
 mqtt:
   host: localhost
@@ -31,6 +31,21 @@ mqtt:
   keepalive_s: 30            # bounds how fast the LWT flips status to offline after kill -9
   topic_prefix: powermeter   # separate namespace from hermes/ (Rhasspy)
   client_id: meter-service
+
+# Keep-awake poke (measured on FRITZ!SE 250, FritzOS 8.25):
+# On battery the device transmits every 120s. Reading getbasicdevicestats makes
+# the box query it, which holds a 10s transmit rate; the hold expires ~126s
+# after the last read, so the device falls back on its own -- there is no
+# command to undo. AVM exposes no setting for this; USB power does NOT disable
+# the 120s mode (tested). Needs only the "Smart Home" box permission.
+# Off by default: 120s is fine for data collection and holding the device awake
+# costs battery. The battery manager toggles it at runtime by publishing
+# on/off to <topic_prefix>/cmd/keep_awake (publish it retained so the state
+# survives a restart of this service).
+keep_awake:
+  enabled: false             # initial state before any MQTT command arrives
+  interval_s: 60.0           # must stay well under the ~126s hold
+  allow_mqtt_toggle: true    # honour <topic_prefix>/cmd/keep_awake
 
 simulate:
   send_period_s: 60.0        # simulated device update period (real one: measure, spec section 2)

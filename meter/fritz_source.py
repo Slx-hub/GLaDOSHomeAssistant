@@ -272,6 +272,18 @@ class FritzSource:
         return self.session.request("/webservices/homeautoswitch.lua",
                                     {"switchcmd": "getdevicelistinfos"})
 
+    def fetch_basic_stats(self) -> str:
+        """Fetch the box's 1-hour statistics buffer for this device.
+
+        Also used as the keep-awake poke: reading this endpoint makes the box
+        query the device, which holds the Energy 250 in its 10s transmit mode
+        instead of the 120s battery-saving mode. Measured empirically — the
+        hold expires ~126s after the last read (see README, "Transmit rate").
+        """
+        return self.session.request("/webservices/homeautoswitch.lua",
+                                    {"switchcmd": "getbasicdevicestats",
+                                     "ain": self.ain or ""})
+
     def fetch_fallback_raw(self) -> str:
         """Raw dump of the undocumented home_auto_query.lua endpoint (Weg 2).
 

@@ -25,6 +25,7 @@ import os
 import signal
 import sys
 import threading
+import time
 from typing import Optional
 
 import paho.mqtt.client as mqtt
@@ -63,6 +64,15 @@ DEFAULTS = {
         "keepalive_s": 30,            # bounds how fast the LWT fires after kill -9
         "topic_prefix": "powermeter",
         "client_id": "meter-service",
+    },
+    # Keep-awake poke: the Energy 250 transmits every 120s on battery, but
+    # holds a 10s rate while something reads getbasicdevicestats. Off by
+    # default — 120s is fine for plain data collection, and holding the device
+    # awake costs battery. The battery manager turns it on over MQTT.
+    "keep_awake": {
+        "enabled": False,             # initial state before any MQTT command arrives
+        "interval_s": 60.0,           # hold expires ~126s after the last poke (measured)
+        "allow_mqtt_toggle": True,    # honour <prefix>/cmd/keep_awake
     },
     "simulate": {
         "send_period_s": 60.0,
@@ -134,6 +144,71 @@ class FreshnessTracker:
         return (now - self.ts_measured).total_seconds() > self.stale_after_s
 
 
+class KeepAwake:
+    """Holds the Energy 250 in its 10s transmit mode by periodically reading
+    getbasicdevicestats (see FritzSource.fetch_basic_stats).
+
+    On battery the device transmits every 120s to save power. Reading the
+    stats endpoint makes the box query it, which raises the rate to 10s; the
+    hold expires ~126s after the last read. So the poke interval must stay
+    comfortably under that, and switching off needs no command at all — the
+    device falls back on its own within ~2 minutes.
+
+    Rides on the main poll loop rather than a thread of its own: the loop
+    already ticks every interval_s, which is far finer than this cadence.
+    """
+
+    def __init__(self, cfg: dict):
+        self.interval_s = cfg["interval_s"]
+        self.allow_mqtt_toggle = cfg["allow_mqtt_toggle"]
+        # Event, not a bare bool: set from the paho network thread via MQTT.
+        self._enabled = threading.Event()
+        if cfg["enabled"]:
+            self._enabled.set()
+        self._last_poke = 0.0
+        self.pokes = 0
+        self.last_error: Optional[str] = None
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled.is_set()
+
+    def set_enabled(self, on: bool) -> bool:
+        """Returns True if the state actually changed."""
+        if on == self.enabled:
+            return False
+        if on:
+            self._enabled.set()
+            # Poke on the next loop tick rather than waiting out the interval.
+            self._last_poke = 0.0
+        else:
+            self._enabled.clear()
+        jlog(logging.INFO, "keep_awake_changed", enabled=on)
+        return True
+
+    def tick(self, source) -> bool:
+        """Poke if enabled and due. Returns True if a poke was attempted."""
+        if not self.enabled:
+            return False
+        if not hasattr(source, "fetch_basic_stats"):
+            return False          # --simulate / --replay have nothing to keep awake
+        now = time.monotonic()
+        if now - self._last_poke < self.interval_s:
+            return False
+        self._last_poke = now
+        try:
+            source.fetch_basic_stats()
+            self.pokes += 1
+            self.last_error = None
+            jlog(logging.DEBUG, "keep_awake_poke", pokes=self.pokes)
+        except Exception as e:
+            # Never let the poke break the measurement path — it is an
+            # optimisation, not a dependency.
+            self.last_error = f"{type(e).__name__}: {e}"
+            jlog(logging.WARNING, "keep_awake_poke_failed", error=self.last_error)
+        return True
+
+
 class MqttPublisher:
     def __init__(self, cfg: dict):
         prefix = cfg["topic_prefix"]
@@ -141,6 +216,11 @@ class MqttPublisher:
         self.topic_energy = f"{prefix}/data/energy"
         self.topic_status = f"{prefix}/health/status"
         self.topic_diag = f"{prefix}/health/diag"
+        self.topic_keep_awake = f"{prefix}/health/keep_awake"
+        self.topic_cmd_keep_awake = f"{prefix}/cmd/keep_awake"
+
+        # Set by main() before connecting; called from the paho network thread.
+        self.on_keep_awake_cmd = None
 
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                    client_id=cfg["client_id"])
@@ -150,15 +230,46 @@ class MqttPublisher:
         self._client.reconnect_delay_set(min_delay=1, max_delay=60)
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
-        # connect_async + loop_start: a broker that is down at service start
-        # (or restarts later) is retried with backoff (acceptance criterion 6).
-        self._client.connect_async(cfg["host"], cfg["port"],
-                                   keepalive=cfg["keepalive_s"])
+        self._client.on_message = self._on_message
+        self._host = cfg["host"]
+        self._port = cfg["port"]
+        self._keepalive_s = cfg["keepalive_s"]
+
+    def start(self):
+        """Connect and start the network loop.
+
+        Deliberately separate from __init__ so callers can install
+        on_keep_awake_cmd first: a retained command is delivered the instant we
+        subscribe, and would be dropped if the handler were not yet in place.
+
+        connect_async + loop_start: a broker that is down at service start
+        (or restarts later) is retried with backoff (acceptance criterion 6).
+        """
+        self._client.connect_async(self._host, self._port,
+                                   keepalive=self._keepalive_s)
         self._client.loop_start()
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         jlog(logging.INFO, "mqtt_connected", reason=str(reason_code))
         client.publish(self.topic_status, "online", qos=1, retain=True)
+        # Re-subscribe on every (re)connect. A retained command is redelivered
+        # here, so the desired state survives a restart of this service without
+        # the battery manager having to republish.
+        client.subscribe(self.topic_cmd_keep_awake, qos=1)
+
+    TRUTHY = {"on", "1", "true", "yes", "enable", "enabled"}
+    FALSY = {"off", "0", "false", "no", "disable", "disabled"}
+
+    def _on_message(self, client, userdata, msg):
+        if msg.topic != self.topic_cmd_keep_awake or self.on_keep_awake_cmd is None:
+            return
+        raw = msg.payload.decode("utf-8", "replace").strip().strip('"').lower()
+        if raw in self.TRUTHY:
+            self.on_keep_awake_cmd(True)
+        elif raw in self.FALSY:
+            self.on_keep_awake_cmd(False)
+        else:
+            jlog(logging.WARNING, "keep_awake_cmd_invalid", payload=raw[:40])
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         jlog(logging.WARNING, "mqtt_disconnected", reason=str(reason_code))
@@ -168,6 +279,10 @@ class MqttPublisher:
 
     def publish_energy(self, payload: dict):
         self._client.publish(self.topic_energy, json.dumps(payload), qos=1, retain=True)
+
+    def publish_keep_awake(self, enabled: bool):
+        self._client.publish(self.topic_keep_awake, "on" if enabled else "off",
+                             qos=1, retain=True)
 
     def publish_diag(self, payload: dict):
         self._client.publish(self.topic_diag, json.dumps(payload), qos=0, retain=False)
@@ -198,7 +313,8 @@ def build_power_payload(reading: MeterReading, fresh: bool, stale: bool,
 
 
 def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
-             record_path: Optional[str], interval_s: float):
+             record_path: Optional[str], interval_s: float,
+             keep_awake: Optional["KeepAwake"] = None):
     tracker = FreshnessTracker(cfg["poll"]["stale_after_s"])
     login_failures = lambda: getattr(getattr(source, "session", None), "login_failures", 0)
     backoff_s = lambda: getattr(getattr(source, "session", None), "backoff_remaining_s", 0.0)
@@ -207,6 +323,8 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
 
     while not stop.is_set():
         started = utcnow()
+        if keep_awake is not None:
+            keep_awake.tick(source)
         reading = None
         error = None
         try:
@@ -262,6 +380,10 @@ def run_loop(source, publisher: MqttPublisher, cfg: dict, stop: threading.Event,
             diag["error"] = error
         if backoff_s() > 0:
             diag["login_backoff_s"] = round(backoff_s())
+        if keep_awake is not None:
+            diag["keep_awake"] = keep_awake.enabled
+            if keep_awake.last_error is not None:
+                diag["keep_awake_error"] = keep_awake.last_error
         publisher.publish_diag({"event": "poll", **diag})
         jlog(logging.DEBUG, "poll", **diag)
 
@@ -368,9 +490,23 @@ def main() -> int:
 
     jlog(logging.INFO, "service_start", mode=source.name,
          interval_s=interval_s, stale_after_s=cfg["poll"]["stale_after_s"])
+    keep_awake = KeepAwake(cfg["keep_awake"])
+
     publisher = MqttPublisher(cfg["mqtt"])
+
+    def handle_keep_awake_cmd(on: bool):
+        if keep_awake.set_enabled(on):
+            publisher.publish_keep_awake(on)
+
+    if keep_awake.allow_mqtt_toggle:
+        publisher.on_keep_awake_cmd = handle_keep_awake_cmd
+    # Publish the configured default first; a retained command arriving on
+    # subscribe then overrides it, which is the intended precedence.
+    publisher.publish_keep_awake(keep_awake.enabled)
+    publisher.start()
+
     try:
-        run_loop(source, publisher, cfg, stop, args.record, interval_s)
+        run_loop(source, publisher, cfg, stop, args.record, interval_s, keep_awake)
     finally:
         publisher.shutdown()
         jlog(logging.INFO, "service_stop")
