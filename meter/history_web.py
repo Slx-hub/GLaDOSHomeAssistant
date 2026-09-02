@@ -116,7 +116,15 @@ PAGE = r"""<!doctype html>
   .stat .k{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
   .stat .v{font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
   .chartwrap{overflow-x:auto}
+  .cwrap{position:relative;width:1040px}
   svg{display:block}
+  .tip{position:absolute;pointer-events:none;z-index:2;background:#0f1218;
+       border:1px solid #3a4150;border-radius:6px;padding:6px 9px;
+       white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  .tip .t{color:var(--dim);font-size:11px}
+  .tip .w{font-weight:650;font-size:15px;font-variant-numeric:tabular-nums;
+          color:var(--accent)}
+  .tip .n{color:var(--dim);font-size:10px;margin-top:2px}
   .empty{color:var(--dim);padding:26px 0;text-align:center}
   h2{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;
      margin:0 0 10px;font-weight:600}
@@ -201,9 +209,51 @@ function chart(series,startTs,endTs){
     .map(h=>{const x=X(t0+h*3600);
     return `<line x1="${x}" x2="${x}" y1="${padT}" y2="${padT+ih}" stroke="#22262f"/>
       <text x="${x}" y="${H-8}" fill="#9aa3b2" font-size="10" text-anchor="middle">${h}:00</text>`;}).join('');
-  box.innerHTML=`<svg width="${W}" height="${H}" role="img" aria-label="power over the day">
+  box.innerHTML=`<div class="cwrap"><svg width="${W}" height="${H}" role="img"
+      aria-label="power over the day">
     ${grid}${xt}<path d="${d}" fill="none" stroke="#5cc8ff" stroke-width="1.6"
-    stroke-linejoin="round"/></svg>`;
+    stroke-linejoin="round"/>
+    <g id="hov" style="display:none">
+      <line id="hovline" y1="${padT}" y2="${padT+ih}" stroke="#ffb454" stroke-width="1"
+            stroke-dasharray="3 3"/>
+      <circle id="hovdot" r="4" fill="#ffb454" stroke="#14161a" stroke-width="1.5"/>
+    </g></svg><div class="tip" hidden></div></div>`;
+
+  // ---- hover readout ----
+  const svg=box.querySelector('svg'), tip=box.querySelector('.tip'),
+        hov=box.querySelector('#hov'), hline=box.querySelector('#hovline'),
+        hdot=box.querySelector('#hovdot');
+  const pad2=v=>String(v).padStart(2,'0');
+  const hhmm=ts=>{const dd=new Date(ts*1000);return pad2(dd.getHours())+':'+pad2(dd.getMinutes());};
+
+  function hide(){hov.style.display='none';tip.hidden=true;}
+  function move(clientX){
+    const r=svg.getBoundingClientRect();
+    // map client px -> svg user units (the svg may be scaled by CSS)
+    const sx=(clientX-r.left)*(W/r.width);
+    const wantTs=t0+((sx-padL)/iw)*span;
+    let best=null,bd=Infinity;
+    for(const p of series){const dd=Math.abs(p.ts-wantTs); if(dd<bd){bd=dd;best=p;}}
+    // a gap is honest: show nothing rather than snapping to a distant point
+    if(!best||bd>600){hide();return;}
+    const x=X(best.ts),y=Y(best.watt);
+    hov.style.display='';
+    hline.setAttribute('x1',x);hline.setAttribute('x2',x);
+    hdot.setAttribute('cx',x);hdot.setAttribute('cy',y);
+    tip.innerHTML=`<div class="t">${hhmm(best.ts)}&ndash;${hhmm(best.ts+300)}</div>`+
+                  `<div class="w">${best.watt.toFixed(1)} W</div>`+
+                  `<div class="n">${best.n} of 30 samples</div>`;
+    tip.hidden=false;
+    // flip left near the right edge, clamp vertically
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=(x+12+tw>W ? x-12-tw : x+12)+'px';
+    tip.style.top=Math.max(0,Math.min(H-th,y-th-10))+'px';
+  }
+  svg.addEventListener('mousemove',ev=>move(ev.clientX));
+  svg.addEventListener('mouseleave',hide);
+  svg.addEventListener('touchstart',ev=>{move(ev.touches[0].clientX);},{passive:true});
+  svg.addEventListener('touchmove',ev=>{move(ev.touches[0].clientX);},{passive:true});
+  svg.addEventListener('touchend',hide,{passive:true});
 }
 
 async function loadAll(){
