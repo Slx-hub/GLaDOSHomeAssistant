@@ -53,11 +53,11 @@ keep_awake:
   allow_mqtt_toggle: true    # honour <topic_prefix>/cmd/keep_awake
 
 # 5-minute power history, recorded from the box's own 1-hour statistics buffer
-# rather than from our MQTT stream: polling every 30 min against a 60 min
-# buffer gives 2x overlap, so data recorded while this service was down is
+# rather than from our MQTT stream: polling every 50 min against a 60 min
+# buffer still overlaps, so data recorded while this service was down is
 # still picked up. Served by meter-history.service.
 # NOTE: reading that buffer is also the keep-awake trigger, so each poll holds
-# the device in 10s mode for ~2 min (~7% duty cycle at 30 min intervals).
+# the device in 10s mode for ~2 min (~4% duty cycle at 50 min intervals).
 history:
   enabled: true
   interval_s: 3000.0         # 50 min against the 60 min buffer

@@ -164,7 +164,7 @@ why it is opt-in and self-releasing.
 ## History (5-minute averages)
 
 Recorded from the box's **own** 1-hour statistics buffer, not from our MQTT
-stream: polling every 30 min against a 60 min buffer gives 2x overlap, so data
+stream: polling every 50 min against a 60 min buffer still overlaps, so data
 recorded while this service was down is still recovered. `history` in
 `config.yaml`.
 
@@ -182,7 +182,7 @@ a complete one. A `0` in the stats array is treated as *no data* rather than
 zeros) and a whole-house meter never reads 0.
 
 **Note:** the history poll and the keep-awake poke are the same request, so
-recording wakes the device for ~2 min every 30 min (~7% duty cycle) even with
+recording wakes the device for ~2 min every 50 min (~4% duty cycle) even with
 `keep_awake` off.
 
 ### Surviving the nightly reboot
@@ -191,12 +191,12 @@ The pi reboots at 02:00 and is back in ~20s. Nothing is lost, by construction:
 
 * **The first tick after start always polls** (`_next_poll` starts at 0), so
   collection resumes immediately instead of waiting out the interval.
-* The box buffer holds **60 min** and we poll every **30 min**, so the last
-  read is at most 30 min old when the outage begins — leaving ~30 min of slack
+* The box buffer holds **60 min** and we poll every **50 min**, so the last
+  read is at most 50 min old when the outage begins — leaving ~10 min of slack
   before anything falls out of the buffer. A 20-second reboot is nowhere near it.
 * **Only a successful poll consumes the full interval.** A failure retries
   after `retry_s` (60s). This matters precisely at boot: the box can be briefly
-  unreachable while the network comes up, and burning 30 min on that could push
+  unreachable while the network comes up, and burning 50 min on that could push
   the next read past the buffer.
 * The last successful poll is persisted in `meta.last_success_ts` (**wall
   clock**, so it survives the reboot). Each poll logs

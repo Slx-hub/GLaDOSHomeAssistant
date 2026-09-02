@@ -73,17 +73,17 @@ DEFAULTS = {
     # awake costs battery. The battery manager turns it on over MQTT.
     "keep_awake": {
         "enabled": False,             # fallback only; the persisted state wins
-        "interval_s": 60.0,           # hold expires ~126s after the last poke (measured)
+        "interval_s": 110.0,          # hold expires ~126s after the last poke (measured)
         "allow_mqtt_toggle": True,    # honour <prefix>/cmd/keep_awake
         # Survives the nightly reboot without depending on broker persistence.
         "state_path": "/home/pi/GLaDOSHomeAssistant/meter/data/keep_awake.json"
     },
     # 5-minute power history recorded from the box's own 1-hour statistics
-    # buffer (see history.py). Polling every 30 min gives 2x overlap, so gaps
-    # while this service was down are recovered.
+    # buffer (see history.py). Polling every 50 min against a 60 min buffer
+    # still overlaps, so gaps while this service was down are recovered.
     "history": {
         "enabled": True,
-        "interval_s": 1800.0,         # 30 min against a 60 min buffer
+        "interval_s": 3000.0,         # 50 min against a 60 min buffer
         "retry_s": 60.0,              # after a FAILED poll — must not burn the interval
         "db_path": "/home/pi/GLaDOSHomeAssistant/meter/data/history.db",
     },
