@@ -44,7 +44,7 @@ mqtt:
 # survives a restart of this service).
 keep_awake:
   enabled: false             # initial state before any MQTT command arrives
-  interval_s: 60.0           # must stay well under the ~126s hold
+  interval_s: 110.0           # must stay well under the ~126s hold
   allow_mqtt_toggle: true    # honour <topic_prefix>/cmd/keep_awake
 
 # 5-minute power history, recorded from the box's own 1-hour statistics buffer
@@ -55,7 +55,7 @@ keep_awake:
 # the device in 10s mode for ~2 min (~7% duty cycle at 30 min intervals).
 history:
   enabled: true
-  interval_s: 1800.0         # 30 min against the 60 min buffer
+  interval_s: 3000.0         # 50 min against the 60 min buffer
   retry_s: 60.0              # retry gap after a FAILED poll. Deliberately short:
                              # the first poll after the nightly reboot can fail
                              # while the network comes up, and waiting a full
