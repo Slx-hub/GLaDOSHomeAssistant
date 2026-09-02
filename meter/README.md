@@ -133,9 +133,30 @@ mosquitto_pub -t powermeter/cmd/keep_awake -m off -q 1 -r   # back to 120s
 ```
 
 Publish it **retained**: the command is redelivered when this service
-subscribes, so the desired state survives a restart here without the battery
-manager noticing. Current state is mirrored on
-`powermeter/health/keep_awake` and in every `diag` payload.
+subscribes. Current state is mirrored on `powermeter/health/keep_awake` and in
+every `diag` payload.
+
+**Retained commands are not a durable store here.** `setup_files/mosquitto.conf`
+sets no `persistence`, so the broker keeps retained messages in RAM only and the
+pi's nightly reboot restarts the container and wipes them all before this
+service ever subscribes. The state is therefore also persisted locally to
+`state_path` (`data/keep_awake.json`, written atomically) and restored on
+startup. Precedence:
+
+    config `enabled`  <  persisted state file  <  live/retained MQTT command
+
+so the battery manager still has the last word, but an outage cannot silently
+reset the mode. A restore is logged as `keep_awake_restored`.
+
+To fix the underlying broker behaviour instead, add to `mosquitto.conf`:
+
+    persistence true
+    persistence_location /mosquitto/data/
+
+and mount a volume for it in `run_docker_containers.sh` (`-v
+$(pwd)/setup_files/mqttdata:/mosquitto/data`) — that script does `docker rm`,
+so without a volume the database dies with the container anyway. That would fix
+retained messages system-wide, zigbee2mqtt included.
 
 Holding the device awake costs battery — 12x the radio duty cycle — which is
 why it is opt-in and self-releasing.

@@ -43,7 +43,12 @@ mqtt:
 # on/off to <topic_prefix>/cmd/keep_awake (publish it retained so the state
 # survives a restart of this service).
 keep_awake:
-  enabled: false             # initial state before any MQTT command arrives
+  # The persisted state file wins over `enabled`, and a live/retained MQTT
+  # command wins over both. The file exists because retained commands are NOT
+  # durable here: mosquitto.conf sets no `persistence`, so the nightly reboot
+  # restarts the broker container and wipes every retained message.
+  enabled: false             # fallback only, used when no state file exists
+  state_path: /home/pi/GLaDOSHomeAssistant/meter/data/keep_awake.json
   interval_s: 60.0           # must stay well under the ~126s hold
   allow_mqtt_toggle: true    # honour <topic_prefix>/cmd/keep_awake
 

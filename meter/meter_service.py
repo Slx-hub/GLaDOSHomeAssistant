@@ -72,9 +72,11 @@ DEFAULTS = {
     # default — 120s is fine for plain data collection, and holding the device
     # awake costs battery. The battery manager turns it on over MQTT.
     "keep_awake": {
-        "enabled": False,             # initial state before any MQTT command arrives
+        "enabled": False,             # fallback only; the persisted state wins
         "interval_s": 60.0,           # hold expires ~126s after the last poke (measured)
         "allow_mqtt_toggle": True,    # honour <prefix>/cmd/keep_awake
+        # Survives the nightly reboot without depending on broker persistence.
+        "state_path": "/home/pi/GLaDOSHomeAssistant/meter/data/keep_awake.json"
     },
     # 5-minute power history recorded from the box's own 1-hour statistics
     # buffer (see history.py). Polling every 30 min gives 2x overlap, so gaps
@@ -189,13 +191,46 @@ class KeepAwake:
     def __init__(self, cfg: dict):
         self.interval_s = cfg["interval_s"]
         self.allow_mqtt_toggle = cfg["allow_mqtt_toggle"]
+        self.state_path = cfg.get("state_path")
         # Event, not a bare bool: set from the paho network thread via MQTT.
         self._enabled = threading.Event()
-        if cfg["enabled"]:
-            self._enabled.set()
+        # Precedence: config default < locally persisted state < live/retained
+        # MQTT command. The local file exists because a retained command is NOT
+        # a durable store: this broker runs without `persistence`, so the pi's
+        # nightly reboot restarts the container and wipes every retained
+        # message before we ever subscribe.
         self._last_poke = 0.0
         self.pokes = 0
         self.last_error: Optional[str] = None
+        restored = self._load_state()
+        if cfg["enabled"] if restored is None else restored:
+            self._enabled.set()
+        if restored is not None and restored != cfg["enabled"]:
+            jlog(logging.INFO, "keep_awake_restored", enabled=restored)
+
+    def _load_state(self) -> Optional[bool]:
+        if not self.state_path:
+            return None
+        try:
+            with open(self.state_path, encoding="utf-8") as f:
+                return bool(json.load(f)["keep_awake"])
+        except FileNotFoundError:
+            return None
+        except Exception as e:
+            jlog(logging.WARNING, "keep_awake_state_unreadable", error=str(e))
+            return None
+
+    def _save_state(self, on: bool):
+        if not self.state_path:
+            return
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(self.state_path)), exist_ok=True)
+            tmp = f"{self.state_path}.tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"keep_awake": on}, f)
+            os.replace(tmp, self.state_path)   # atomic: never a half-written file
+        except Exception as e:
+            jlog(logging.WARNING, "keep_awake_state_unwritable", error=str(e))
 
     @property
     def enabled(self) -> bool:
@@ -211,6 +246,7 @@ class KeepAwake:
             self._last_poke = 0.0
         else:
             self._enabled.clear()
+        self._save_state(on)
         jlog(logging.INFO, "keep_awake_changed", enabled=on)
         return True
 
