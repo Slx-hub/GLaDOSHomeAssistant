@@ -1,7 +1,7 @@
 meta {
   name: Trias_example
   type: http
-  seq: 9
+  seq: 12
 }
 
 post {
@@ -21,18 +21,20 @@ body:xml {
                       <LocationRef>
                           <StopPlaceRef>de:08216:1844</StopPlaceRef>
                       </LocationRef>
-                      <DepArrTime>2025-09-25T08:00:00</DepArrTime>
+                      <DepArrTime>2025-12-03T08:00:00</DepArrTime>
                   </Origin>
                   <Destination>
                       <LocationRef>
-                          <StopPlaceRef>de:08212:90</StopPlaceRef>
+                          <StopPlaceRef>de:08212:403</StopPlaceRef>
                       </LocationRef>
                   </Destination>
                   <Params>
+                    <BaseTripPolicy>
                       <NumberOfResultsGroup>
-                        <NumberOfResultsBefore>0</NumberOfResultsBefore>
-                        <NumberOfResultsAfter>3</NumberOfResultsAfter>
+                        <NumberOfResultsBefore>1</NumberOfResultsBefore>
+                        <NumberOfResultsAfter>1</NumberOfResultsAfter>
                       </NumberOfResultsGroup>
+                    </BaseTripPolicy>
                   </Params>
               </TripRequest>
           </RequestPayload>

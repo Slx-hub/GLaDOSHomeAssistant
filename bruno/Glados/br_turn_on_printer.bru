@@ -1,0 +1,16 @@
+meta {
+  name: br_turn_on_printer
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://192.168.178.30:5123/intent/ChangeSocketState?source=printer&state=on
+  body: none
+  auth: none
+}
+
+query {
+  source: printer
+  state: on
+}
