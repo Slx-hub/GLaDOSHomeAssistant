@@ -6,3 +6,10 @@ logs/*
 meter/venv/
 __pycache__/
 meter/data/
+
+# Rhasspy profile bind mount: keep profile.json/sentences.ini/slots, drop the
+# generated and downloaded artefacts (the speech models are hundreds of MB).
+setup_files/rhasspy-profiles/*/supervisord.*
+setup_files/rhasspy-profiles/*/intent_graph.pickle.gz
+setup_files/rhasspy-profiles/*/kaldi/
+setup_files/rhasspy-profiles/*/*.tar.gz

@@ -6,13 +6,12 @@
         "system": "fsticuffs"
     },
     "microphone": {
-        "arecord": {
-            "device": "plughw:CARD=seeed4micvoicec,DEV=0"
-        },
-        "system": "arecord"
+        "system": "dummy"
     },
     "mqtt": {
-        "enabled": "true"
+        "enabled": "true",
+        "host": "mosquitto",
+        "port": "1883"
     },
     "sounds": {
         "aplay": {
@@ -21,16 +20,12 @@
         "system": "aplay"
     },
     "speech_to_text": {
-        "system": "kaldi"
+        "system": "dummy"
     },
     "text_to_speech": {
         "system": "nanotts"
     },
     "wake": {
-        "porcupine": {
-            "access_key": "kfSf+L24Z6h8gjEb3o7YH2EbJizxQI2NZyprdEmjUuFQZNgNOxz7FA==",
-            "keyword_path": "glados_pi_v2_1_0.ppn"
-        },
-        "system": "porcupine"
+        "system": "dummy"
     }
 }
