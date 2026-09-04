@@ -22,11 +22,27 @@ import logging
 import queue
 import threading
 import time
+import unicodedata
 from typing import Dict, Optional
 
 import requests
 
 from common import jlog
+
+# ntfy carries title/tags in HTTP headers, and requests encodes headers as
+# latin-1. A single em dash in a title used to raise UnicodeEncodeError inside
+# the worker -- swallowed, so the alert simply never arrived. Fold the exotic
+# punctuation this codebase likes down to ASCII before it reaches a header.
+_HEADER_SUBS = str.maketrans({
+    "\u2014": "-", "\u2013": "-", "\u2026": "...",
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+})
+
+
+def _header_safe(value: str) -> str:
+    folded = unicodedata.normalize("NFKD", value.translate(_HEADER_SUBS))
+    return folded.encode("ascii", "replace").decode("ascii")
+
 
 # ntfy priorities
 PRIO_LOW = "low"
@@ -159,7 +175,8 @@ class Notifier:
             if item is None:
                 break
             title, body, priority, tags = item
-            headers = {"Title": title, "Priority": priority, "Tags": tags}
+            headers = {"Title": _header_safe(title),
+                       "Priority": priority, "Tags": _header_safe(tags)}
             if self.token:
                 headers["Authorization"] = f"Bearer {self.token}"
             try:

@@ -28,7 +28,7 @@ advanced:
     - 128
     - 182
     - 60
-  log_level: debug
+  log_level: info
 devices:
   '0xe0798dfffe7f4646':
     friendly_name: showcase

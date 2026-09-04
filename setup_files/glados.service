@@ -1,11 +1,14 @@
 [Unit]
 Description=Glados Python Script
 After=multi-user.target
-StartLimitBurst=1
+# No start rate limit. This box is unattended: a unit parked in "failed" after
+# a single crash stays invisible until something is noticed missing hours later.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 Restart=always
+RestartSec=5
 ExecStart=python /home/pi/GLaDOSHomeAssistant/mqtt_listener.py
 User=pi
 WorkingDirectory=/home/pi/GLaDOSHomeAssistant/

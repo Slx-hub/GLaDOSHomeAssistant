@@ -55,6 +55,11 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 app = Flask(__name__)
 
+# (connect, read) seconds for every outbound request. Without it a dead network
+# blocks forever, and on_message runs these actions on paho's loop thread --
+# one hung call and MQTT handling never recovers, not even on reconnect.
+HTTP_TIMEOUT = (5, 30)
+
 def slots_to_json(data: dict) -> str:
     slots = []
     for key, value in data.items():
@@ -105,7 +110,8 @@ def picture_frame_send_info_screen():
         resp = requests.post(
             "https://projekte.kvv-efa.de/schneidertrias/trias",
             headers={"Content-Type": "text/xml"},
-            data=fill_variables(kvv_request)
+            data=fill_variables(kvv_request),
+            timeout=HTTP_TIMEOUT
         )
         resp.raise_for_status()
         resp.encoding = 'utf-8'  # Explicitly set encoding to UTF-8
@@ -115,11 +121,11 @@ def picture_frame_send_info_screen():
             parsed["kvv"] = f"error: {resp.text}"
             logger.info("Failed to parse XML: %s" % e)
     except Exception as e:
-        parsed["kvv"] = f"error: Status code not OK: {resp.status_code}"
+        parsed["kvv"] = f"error: request failed: {e}"
         logger.info("Failed to request KVV: %s" % e)
 
     try:
-        resp = requests.get(fill_variables(weather_request))
+        resp = requests.get(fill_variables(weather_request), timeout=HTTP_TIMEOUT)
         resp.raise_for_status()
         try:
             parsed["weather"] = resp.json()
@@ -127,7 +133,7 @@ def picture_frame_send_info_screen():
             parsed["weather"] = f"error: {resp.text}"
             logger.info("Failed to parse JSON: %s" % e)
     except Exception as e:
-        parsed["weather"] = f"error: Status code not OK: {resp.status_code}"
+        parsed["weather"] = f"error: request failed: {e}"
         logger.info("Failed to request Weather: %s" % e)
 
     logger.info(f"Received API data")
@@ -137,7 +143,8 @@ def picture_frame_send_info_screen():
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
-            data=image_bytes
+            data=image_bytes,
+            timeout=HTTP_TIMEOUT
         )
         logger.info("Displayed info screen, response %s" % resp.status_code)
     except Exception as e:
@@ -168,7 +175,8 @@ def picture_frame_send_image():
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
-            data=picture_frame_util.load_random_glds_image()
+            data=picture_frame_util.load_random_glds_image(),
+            timeout=HTTP_TIMEOUT
         )
         logger.info("Displayed image, response %s" % resp.status_code)
     except Exception as e:
@@ -176,7 +184,7 @@ def picture_frame_send_image():
         
 def picture_frame_clear_display():
     try:
-        resp = requests.get("http://192.168.178.42/clear?color=1")
+        resp = requests.get("http://192.168.178.42/clear?color=1", timeout=HTTP_TIMEOUT)
         logger.info("Cleared Display, response %s" % resp.status_code)
     except Exception as e:
         logger.info("Failed to post image: %s" % e)        
@@ -186,7 +194,8 @@ def picture_frame_special_action():
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
-            data=picture_frame_util.load_specific_glds_image()
+            data=picture_frame_util.load_specific_glds_image(),
+            timeout=HTTP_TIMEOUT
         )
         logger.info("Performed special action, response %s" % resp.status_code)
     except Exception as e:
@@ -208,9 +217,16 @@ def on_connect(client, userdata, flags, rc):
     logger.info("Connected!!")
 
 
-def on_disconnect(client, userdata, flags, rc):
-    """Called when disconnected from MQTT broker."""
-    client.reconnect()
+def on_disconnect(client, userdata, rc):
+    """Called when disconnected from MQTT broker.
+
+    paho 1.x calls this with three arguments. The old four-argument
+    signature raised TypeError inside the network loop, which killed the
+    loop's own reconnect -- one broker blip and this process stayed deaf
+    until someone restarted it. loop_forever()/loop_start() reconnect on
+    their own, and on_connect re-subscribes.
+    """
+    logger.warning("Disconnected from MQTT (rc=%s), awaiting auto-reconnect", rc)
 
 
 def on_message(client, userdata, msg):

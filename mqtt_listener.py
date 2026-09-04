@@ -51,9 +51,16 @@ def on_connect(client, userdata, flags, rc):
 	logger.info("Connected!!")
 
 
-def on_disconnect(client, userdata, flags, rc):
-	"""Called when disconnected from MQTT broker."""
-	client.reconnect()
+def on_disconnect(client, userdata, rc):
+	"""Called when disconnected from MQTT broker.
+
+	paho 1.x calls this with three arguments. The old four-argument
+	signature raised TypeError inside the network loop, which killed the
+	loop's own reconnect -- one broker blip and this process stayed deaf
+	until someone restarted it. loop_forever()/loop_start() reconnect on
+	their own, and on_connect re-subscribes.
+	"""
+	logger.warning("Disconnected from MQTT (rc=%s), awaiting auto-reconnect", rc)
 
 
 def on_message(client, userdata, msg):
@@ -297,7 +304,7 @@ def set_sun_oriented_fields(yaml_str):
 
 def call_sunset_api(): 
 	try:
-		response = requests.get('https://api.sunrisesunset.io/json?lat=48.859631&lng=8.206893') 
+		response = requests.get('https://api.sunrisesunset.io/json?lat=48.859631&lng=8.206893', timeout=(5, 15)) 
 	except Exception as e:
 		return
 	if response.status_code == 200: 
