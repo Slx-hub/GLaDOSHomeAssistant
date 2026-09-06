@@ -84,6 +84,33 @@ def api_summary():
         conn.close()
 
 
+@app.route("/api/profile")
+def api_profile():
+    """Average day profile for a period. On demand only: unlike /api/summary
+    this walks every bucket in the range in python (local time-of-day folding),
+    so the UI asks for it when the user clicks, not on every period change."""
+    frm, to = request.args.get("from"), request.args.get("to")
+    step = request.args.get("step_s", type=int) or history.BUCKET_S
+    conn = db()
+    if conn is None:
+        return jsonify({"profile": [], "range": "none", "step_s": step})
+    try:
+        start = end = None
+        rng = "all"
+        if frm and to:
+            start, _ = history.day_bounds_utc(frm, TZ)
+            _, end = history.day_bounds_utc(to, TZ)
+            rng = f"{frm} .. {to}"
+        prof = history.average_profile(conn, TZ, start, end, step)
+        return jsonify({"profile": prof, "range": rng,
+                        "step_s": max(history.BUCKET_S, step),
+                        "days": max((p["days"] for p in prof), default=0)})
+    except ValueError:
+        return jsonify({"error": "bad date"}), 400
+    finally:
+        conn.close()
+
+
 @app.route("/")
 def index():
     return Response(PAGE, mimetype="text/html")
@@ -116,8 +143,12 @@ PAGE = r"""<!doctype html>
   .stat .k{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
   .stat .v{font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
   .chartwrap{overflow-x:auto}
-  .cwrap{position:relative;width:1040px}
-  svg{display:block}
+  /* The chart scales to whatever the panel gives it (viewBox user units stay
+     1040x260), so it never overflows into a scrollbar on a wide screen. The
+     min-width is the point below which the axis labels stop being readable --
+     there, and only there, the wrapper scrolls. */
+  .cwrap{position:relative;width:100%;min-width:600px}
+  svg{display:block;width:100%;height:auto}
   .tip{position:absolute;pointer-events:none;z-index:2;background:#0f1218;
        border:1px solid #3a4150;border-radius:6px;padding:6px 9px;
        white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.5)}
@@ -139,11 +170,6 @@ PAGE = r"""<!doctype html>
   <span class="sub">5-minute averages · from the FRITZ!Box statistics buffer</span></header>
 <main>
   <div class="panel">
-    <h2>All data</h2>
-    <div id="allstats" class="stats"></div>
-  </div>
-
-  <div class="panel">
     <h2>Period</h2>
     <div class="row">
       <label>from <input type="date" id="pfrom"></label>
@@ -152,6 +178,18 @@ PAGE = r"""<!doctype html>
       <button onclick="clearPeriod()">Reset to all</button>
     </div>
     <div id="pstats" class="stats"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="pgraphbtn" onclick="loadProfile()">Average day graph</button>
+      <select id="pstep" onchange="if(PROF)loadProfile()">
+        <option value="300">5 min</option>
+        <option value="900">15 min</option>
+        <option value="1800">30 min</option>
+        <option value="3600">1 h</option>
+      </select>
+      <span class="sub" id="pmeta">every bucket of the period folded onto its
+        time of day &mdash; computed on request</span>
+    </div>
+    <div class="chartwrap" id="pchart"></div>
   </div>
 
   <div class="panel">
@@ -172,7 +210,7 @@ PAGE = r"""<!doctype html>
 </main>
 <script>
 const fmt=(v,u)=>v==null?'&mdash;':v.toLocaleString(undefined,{maximumFractionDigits:1})+' '+u;
-let DAYS=[],CUR=null;
+let DAYS=[],CUR=null,PROF=null,PERIOD=null;
 
 function statBlock(el,s){
   if(!s||!s.buckets){el.innerHTML='<div class="empty">No data yet.</div>';return;}
@@ -184,21 +222,39 @@ function statBlock(el,s){
   ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 }
 
-function chart(series,startTs,endTs){
-  const box=document.getElementById('chart');
-  if(!series.length){box.innerHTML='<div class="empty">No data for this day.</div>';return;}
+// One renderer for both charts: the day series (x = unix ts inside the local
+// day window) and the period profile (x = seconds since local midnight). Only
+// the x meaning, the tooltip text and the optional min/max band differ.
+//   pts: [{x, y, band:[lo,hi]?, ...}] ordered by x
+//   o:   {empty, gap, snap, tip(p), color, band}
+function lineChart(box,pts,x0,x1,o){
+  if(!pts.length){box.innerHTML=`<div class="empty">${o.empty}</div>`;return;}
   const W=1040,H=260,padL=52,padR=12,padT=12,padB=28;
   const iw=W-padL-padR, ih=H-padT-padB;
-  const maxW=Math.max(...series.map(p=>p.watt))*1.1||1;
+  const maxW=Math.max(...pts.map(p=>p.band?p.band[1]:p.y))*1.1||1;
   // x by time-of-day, using the server's local-day window so the axis is not
   // shifted by the UTC offset and DST-length days still span correctly.
-  const t0=startTs, span=Math.max(1,endTs-startTs);
+  const t0=x0, span=Math.max(1,x1-x0);
   const X=ts=>padL+((ts-t0)/span)*iw, Y=w=>padT+ih-(w/maxW)*ih;
   let d='',prev=null;
-  for(const p of series){
-    const x=X(p.ts),y=Y(p.watt);
-    d += (prev===null||p.ts-prev>900?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';
-    prev=p.ts;
+  for(const p of pts){
+    const x=X(p.x),y=Y(p.y);
+    d += (prev===null||p.x-prev>o.gap?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';
+    prev=p.x;
+  }
+  // min/max envelope, as one closed polygon per gap-free stretch
+  let band='';
+  if(pts[0].band){
+    let seg=[],pv=null;
+    const flush=()=>{
+      if(seg.length>1)
+        band+='M '+seg.map(p=>X(p.x).toFixed(1)+' '+Y(p.band[1]).toFixed(1)).join(' L ')
+             +' L '+seg.slice().reverse()
+                .map(p=>X(p.x).toFixed(1)+' '+Y(p.band[0]).toFixed(1)).join(' L ')+' Z ';
+      seg=[];
+    };
+    for(const p of pts){if(pv!==null&&p.x-pv>o.gap)flush();seg.push(p);pv=p.x;}
+    flush();
   }
   const yt=[0,.25,.5,.75,1].map(f=>Math.round(maxW*f));
   const grid=yt.map(v=>`<line x1="${padL}" x2="${W-padR}" y1="${Y(v)}" y2="${Y(v)}"
@@ -209,45 +265,46 @@ function chart(series,startTs,endTs){
     .map(h=>{const x=X(t0+h*3600);
     return `<line x1="${x}" x2="${x}" y1="${padT}" y2="${padT+ih}" stroke="#22262f"/>
       <text x="${x}" y="${H-8}" fill="#9aa3b2" font-size="10" text-anchor="middle">${h}:00</text>`;}).join('');
-  box.innerHTML=`<div class="cwrap"><svg width="${W}" height="${H}" role="img"
-      aria-label="power over the day">
-    ${grid}${xt}<path d="${d}" fill="none" stroke="#5cc8ff" stroke-width="1.6"
+  box.innerHTML=`<div class="cwrap"><svg viewBox="0 0 ${W} ${H}"
+      role="img" aria-label="${o.label}">
+    ${grid}${xt}
+    ${band?`<path d="${band}" fill="${o.color}" fill-opacity=".14" stroke="none"/>`:''}
+    <path d="${d}" fill="none" stroke="${o.color}" stroke-width="1.6"
     stroke-linejoin="round"/>
-    <g id="hov" style="display:none">
-      <line id="hovline" y1="${padT}" y2="${padT+ih}" stroke="#ffb454" stroke-width="1"
+    <g class="hov" style="display:none">
+      <line class="hovline" y1="${padT}" y2="${padT+ih}" stroke="#ffb454" stroke-width="1"
             stroke-dasharray="3 3"/>
-      <circle id="hovdot" r="4" fill="#ffb454" stroke="#14161a" stroke-width="1.5"/>
+      <circle class="hovdot" r="4" fill="#ffb454" stroke="#14161a" stroke-width="1.5"/>
     </g></svg><div class="tip" hidden></div></div>`;
 
   // ---- hover readout ----
   const svg=box.querySelector('svg'), tip=box.querySelector('.tip'),
-        hov=box.querySelector('#hov'), hline=box.querySelector('#hovline'),
-        hdot=box.querySelector('#hovdot');
-  const pad2=v=>String(v).padStart(2,'0');
-  const hhmm=ts=>{const dd=new Date(ts*1000);return pad2(dd.getHours())+':'+pad2(dd.getMinutes());};
+        hov=box.querySelector('.hov'), hline=box.querySelector('.hovline'),
+        hdot=box.querySelector('.hovdot');
 
   function hide(){hov.style.display='none';tip.hidden=true;}
   function move(clientX){
     const r=svg.getBoundingClientRect();
     // map client px -> svg user units (the svg may be scaled by CSS)
     const sx=(clientX-r.left)*(W/r.width);
-    const wantTs=t0+((sx-padL)/iw)*span;
+    const wantX=t0+((sx-padL)/iw)*span;
     let best=null,bd=Infinity;
-    for(const p of series){const dd=Math.abs(p.ts-wantTs); if(dd<bd){bd=dd;best=p;}}
+    for(const p of pts){const dd=Math.abs(p.x-wantX); if(dd<bd){bd=dd;best=p;}}
     // a gap is honest: show nothing rather than snapping to a distant point
-    if(!best||bd>600){hide();return;}
-    const x=X(best.ts),y=Y(best.watt);
+    if(!best||bd>o.snap){hide();return;}
+    const x=X(best.x),y=Y(best.y);
     hov.style.display='';
     hline.setAttribute('x1',x);hline.setAttribute('x2',x);
     hdot.setAttribute('cx',x);hdot.setAttribute('cy',y);
-    tip.innerHTML=`<div class="t">${hhmm(best.ts)}&ndash;${hhmm(best.ts+300)}</div>`+
-                  `<div class="w">${best.watt.toFixed(1)} W</div>`+
-                  `<div class="n">${best.n} of 30 samples</div>`;
+    tip.innerHTML=o.tip(best);
     tip.hidden=false;
-    // flip left near the right edge, clamp vertically
+    // The tip is a plain div in CSS px while x/y are svg user units, so scale
+    // them: the svg is only as wide as the panel allows. Then flip left near
+    // the right edge and clamp vertically.
+    const k=r.width/W, px=x*k, py=y*k;
     const tw=tip.offsetWidth, th=tip.offsetHeight;
-    tip.style.left=(x+12+tw>W ? x-12-tw : x+12)+'px';
-    tip.style.top=Math.max(0,Math.min(H-th,y-th-10))+'px';
+    tip.style.left=(px+12+tw>r.width ? px-12-tw : px+12)+'px';
+    tip.style.top=Math.max(0,Math.min(r.height-th,py-th-10))+'px';
   }
   svg.addEventListener('mousemove',ev=>move(ev.clientX));
   svg.addEventListener('mouseleave',hide);
@@ -256,9 +313,41 @@ function chart(series,startTs,endTs){
   svg.addEventListener('touchend',hide,{passive:true});
 }
 
+const pad2=v=>String(v).padStart(2,'0');
+const hhmmTs=ts=>{const d=new Date(ts*1000);return pad2(d.getHours())+':'+pad2(d.getMinutes());};
+const hhmmSlot=s=>pad2(Math.floor(s/3600)%24)+':'+pad2(Math.floor(s/60)%60);
+
+function chart(series,startTs,endTs){
+  lineChart(document.getElementById('chart'),
+    series.map(p=>({x:p.ts,y:p.watt,n:p.n})), startTs, endTs, {
+      label:'power over the day', color:'#5cc8ff', gap:900, snap:600,
+      empty:'No data for this day.',
+      tip:p=>`<div class="t">${hhmmTs(p.x)}&ndash;${hhmmTs(p.x+300)}</div>`+
+             `<div class="w">${p.y.toFixed(1)} W</div>`+
+             `<div class="n">${p.n} of 30 samples</div>`});
+}
+
+// Average day: every bucket of the period folded onto its time of day. The
+// band is the min/max single bucket seen at that time of day, so a spiky band
+// around a flat mean means "same hour, very different days".
+function profileChart(prof,step){
+  lineChart(document.getElementById('pchart'),
+    prof.map(p=>({x:p.slot,y:p.watt,band:[p.min_w,p.max_w],days:p.days})),
+    0, 86400, {
+      label:'average power by time of day', color:'#ffb454',
+      gap:step*2, snap:Math.max(step,600),
+      empty:'No data in this period.',
+      tip:p=>`<div class="t">${hhmmSlot(p.x)}&ndash;${hhmmSlot(p.x+step)} · ${p.days} day(s)</div>`+
+             `<div class="w">${p.y.toFixed(1)} W</div>`+
+             `<div class="n">min ${p.band[0].toFixed(1)} · max ${p.band[1].toFixed(1)} W</div>`});
+}
+
+// All data: the from/to inputs start at the full range, so the Period panel
+// shows it without a second box. The date fields are only (re)filled while the
+// user has not narrowed the period -- otherwise the 5-minute refresh would
+// silently widen their selection back to everything.
 async function loadAll(){
   const r=await (await fetch('/api/summary')).json();
-  statBlock(document.getElementById('allstats'),r.summary);
   if(r.summary&&r.summary.first_ts){
     const a=new Date(r.summary.first_ts*1000),b=new Date(r.summary.last_ts*1000);
     const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -267,6 +356,8 @@ async function loadAll(){
   }
   statBlock(document.getElementById('pstats'),r.summary);
 }
+// The periodic refresh, which must preserve whatever the user is looking at.
+function refresh(){ (PERIOD?loadPeriod(false):loadAll()); loadDays(); }
 async function loadDays(){
   DAYS=(await (await fetch('/api/days')).json()).days;
   const sel=document.getElementById('daysel');
@@ -296,18 +387,49 @@ async function loadDay(date){
 }
 function step(n){const i=DAYS.findIndex(d=>d.date===CUR);
   if(i>=0&&DAYS[i+n]) loadDay(DAYS[i+n].date);}
-async function loadPeriod(){
+function dropProfile(){
+  // The graph belongs to the period it was computed for; showing it next to a
+  // different period would be a lie, and recomputing uninvited is the cost we
+  // are deliberately avoiding.
+  PROF=null;
+  document.getElementById('pchart').innerHTML='';
+  document.getElementById('pmeta').innerHTML=
+    'every bucket of the period folded onto its time of day &mdash; computed on request';
+}
+// user=false is the periodic refresh re-running the same period: it must not
+// throw away the profile graph the user asked for.
+async function loadPeriod(user=true){
   const f=document.getElementById('pfrom').value,t=document.getElementById('pto').value;
   if(!f||!t)return;
+  PERIOD={f,t};
   const r=await (await fetch(`/api/summary?from=${f}&to=${t}`)).json();
   statBlock(document.getElementById('pstats'),r.summary);
+  if(user) dropProfile();
 }
 async function clearPeriod(){
-  const r=await (await fetch('/api/summary')).json();
-  statBlock(document.getElementById('pstats'),r.summary);
+  PERIOD=null;
+  await loadAll();
+  dropProfile();
+}
+// On demand: the server walks every bucket in the range to fold it onto local
+// time of day, so this only runs when the button (or the step select) is used.
+async function loadProfile(){
+  const f=document.getElementById('pfrom').value,t=document.getElementById('pto').value,
+        step=+document.getElementById('pstep').value,
+        btn=document.getElementById('pgraphbtn'),meta=document.getElementById('pmeta');
+  const q=(f&&t)?`from=${f}&to=${t}&step_s=${step}`:`step_s=${step}`;
+  btn.disabled=true;meta.textContent='computing…';
+  try{
+    const r=await (await fetch('/api/profile?'+q)).json();
+    PROF=r;
+    profileChart(r.profile||[],r.step_s||step);
+    meta.textContent=`${r.range} · up to ${r.days} day(s) per point · band = min/max bucket`;
+  }catch(e){
+    meta.textContent='failed: '+e;
+  }finally{btn.disabled=false;}
 }
 loadAll();loadDays();
-setInterval(()=>{loadAll();loadDays();},300000);
+setInterval(refresh,300000);
 </script></body></html>"""
 
 

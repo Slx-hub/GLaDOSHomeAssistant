@@ -262,6 +262,52 @@ def summary(conn, start_ts: Optional[int] = None, end_ts: Optional[int] = None) 
     }
 
 
+def average_profile(conn, tz, start_ts: Optional[int] = None,
+                    end_ts: Optional[int] = None, step_s: int = BUCKET_S) -> List[dict]:
+    """Average day profile over a range: every stored bucket folded onto its
+    local time-of-day slot -> [{slot, watt, min_w, max_w, days, buckets}, ...]
+
+    Slots are LOCAL seconds-since-midnight, not UTC, so the curve lines up with
+    human habits and stays aligned across a DST change. That is also why the
+    folding happens here and not in SQL: sqlite has no tz database, so it
+    cannot name the local hour of a UTC timestamp.
+
+    Cost is one row-by-row pass over the range (sqlite cannot group by local
+    time either), which is why the web UI only asks for this on demand instead
+    of computing it alongside every period summary.
+    """
+    step = max(BUCKET_S, int(step_s))
+    where, args = "", []
+    if start_ts is not None and end_ts is not None:
+        where, args = "WHERE ts >= ? AND ts < ?", [start_ts, end_ts]
+    cur = conn.execute(f"SELECT ts, watt FROM power_5min {where} ORDER BY ts", args)
+    # slot -> [sum, n, min, max, distinct_days, last_day_seen]
+    acc: Dict[int, list] = {}
+    for r in cur:
+        lt = datetime.fromtimestamp(r["ts"], tz)
+        w = r["watt"]
+        slot = ((lt.hour * 3600 + lt.minute * 60 + lt.second) // step) * step
+        a = acc.get(slot)
+        if a is None:
+            acc[slot] = [w, 1, w, w, 1, lt.toordinal()]
+            continue
+        a[0] += w
+        a[1] += 1
+        if w < a[2]:
+            a[2] = w
+        if w > a[3]:
+            a[3] = w
+        # Rows arrive in ts order, so a new local day for this slot is always
+        # later than the last one seen -- no set needed to count days.
+        day = lt.toordinal()
+        if day != a[5]:
+            a[4] += 1
+            a[5] = day
+    return [{"slot": s, "watt": round(a[0] / a[1], 1), "min_w": round(a[2], 1),
+             "max_w": round(a[3], 1), "days": a[4], "buckets": a[1]}
+            for s, a in sorted(acc.items())]
+
+
 def days_with_data(conn, tz) -> List[dict]:
     """One row per local calendar day that has data."""
     cur = conn.execute("SELECT ts, watt FROM power_5min ORDER BY ts")
