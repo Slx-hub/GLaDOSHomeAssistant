@@ -1,5 +1,7 @@
 *.pyc
 *.save
+# API tokens. Was committed until Sep 2026, keep a copy outside the repo.
+.env
 *.log
 logs/*
 .vscode/*

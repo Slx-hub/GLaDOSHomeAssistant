@@ -5,7 +5,9 @@ def send_rgb_command(indices, r, g, b, w, deciseconds):
     ser.write(bytes([indices,r,g,b,w,deciseconds]))
 
 ser = serial.Serial(
-    port='/dev/ttyACM1',
+    # by-id path: stable across boots regardless of USB enumeration order.
+    # Contains the board's serial number, a replacement XIAO needs a new entry.
+    port='/dev/serial/by-id/usb-Seeed_Seeed_XIAO_M0_D27D9F9850583234352E3120FF0F0E24-if00',
     baudrate=9600
 )
 

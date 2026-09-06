@@ -34,22 +34,28 @@ Linux command to convert mp3 to wav:
 
 ## How to migrate
 
-Turns out i have to do this more often than i would like to, so this time ima write down all the steps while im at it
+Turns out i have to do this more often than i would like to, so this time ima write down all the steps while im at it.
 
-- on the old pie: create docker image with `docker commit <container_id_or_name> gladosrhasspy:latest`
--	`docker save -o ./setup_files/gladosrhasspy.tar gladosrhasspy:latest`
-- copy tar to temporary space
-- on the new pie: `sudo apt update` and `sudo apt upgrade` cant hurt
-- checkout straight into home, path should be `home/pi/GLaDOSHomeAssistant/`
-- run complete_setup.sh
-- move `gladosrhasspy.tar` from temp to new pie
-- install docker as instructed <https://docs.docker.com/engine/install/debian>
-- run `docker load -i gladosrhasspy.tar`
-- edit `run_docker_containers.sh` to align with <https://www.zigbee2mqtt.io/guide/installation/02_docker.html>
-- execute `run_docker_containers.sh`
-- setup rhasspy as shown in `./setup_files/rhasspy-profile.json` (weirdly enough there is an export but no import)
-- copy rhasspy sentences from `./setup_files/rhasspy-sentences.txt`
-- everything should run now
+Everything except a handful of files lives in this repo. Before the old pi dies, copy these somewhere safe:
+
+- `/etc/meter.env` (FRITZ!Box password, ntfy topic url)
+- `~/.ssh/git` (github deploy key, only needed for pushing)
+- `.env` in the repo root (TRIAS and weather api tokens, gitignored)
+- optional: `meter/data/history.db` (power history, gitignored, restore starts from zero without it)
+
+On the new pi:
+
+1. `sudo apt update && sudo apt upgrade`
+2. install docker as instructed <https://docs.docker.com/engine/install/debian>, then `sudo usermod -aG docker pi` and re-login
+3. checkout straight into home, path must be `/home/pi/GLaDOSHomeAssistant/` (the systemd units use absolute paths)
+4. restore the files listed above (`sudo chmod 600 /etc/meter.env`)
+5. run `complete_setup.sh` (python deps, systemd units, meter venv, bash aliases)
+6. plug in ConBee II, XIAO and the USB speaker, check `ls -la /dev/serial/by-id/` matches the paths in `run_docker_containers.sh` and `lib/module_neopixel.py`
+7. run `run_docker_containers.sh`. It pulls the pinned images, the Rhasspy profile is bind-mounted from `setup_files/rhasspy-profiles/`, no manual profile setup needed
+8. open <http://raspberrypi:12101>, hit **Train** once (the intent graph is gitignored)
+9. everything should run now. The ConBee keeps the zigbee network on the stick and `setup_files/z2mdata/` has the pairings, so no re-pairing
+
+No docker commit/save/load anymore: the old `gladosrhasspy:latest` image was the stock `rhasspy/rhasspy:2.5.11` plus a layer of cache junk, so the 1.6 GB tar is not needed.
 
 - !(no longer works, probs too old. voicecard will be removed for now) checkout <https://github.com/respeaker/seeed-voicecard> into home follow readme
     !might be on the wooden path here, maybe <https://github.com/respeaker/4mics_hat> is the correct thing to do?
