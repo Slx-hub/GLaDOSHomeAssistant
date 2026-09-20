@@ -24,7 +24,7 @@ class Zigbee(Receiver):
                 reply_topic.append('z2mq/' + source + '/set')
                 property_value = settings["ReceiverProperties"][source][mode]
                 if property_value == 'off':
-                    reply_payload.append('{"state":"off", "brightness":0}')
+                    reply_payload.append('{"state":"off"}')
                 else:
                     reply_payload.append('{' + property_value + ',"state":"' + intent.slots["state"] + '"}')
         

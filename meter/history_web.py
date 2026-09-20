@@ -72,12 +72,19 @@ def api_summary():
     if conn is None:
         return jsonify({"summary": None, "range": "none"})
     try:
+        start = end = None
+        rng = "all"
         if frm and to:
             start, _ = history.day_bounds_utc(frm, TZ)
             _, end = history.day_bounds_utc(to, TZ)
-            return jsonify({"summary": history.summary(conn, start, end),
-                            "range": f"{frm} .. {to}"})
-        return jsonify({"summary": history.summary(conn), "range": "all"})
+            rng = f"{frm} .. {to}"
+        # The per-day numbers need local-day folding, so they cost one pass
+        # over the range in python -- the same pass /api/days already makes on
+        # every refresh, which is why they ride along here instead of being a
+        # separate on-demand endpoint.
+        summ = history.summary(conn, start, end)
+        summ.update(history.day_energy(conn, TZ, start, end))
+        return jsonify({"summary": summ, "range": rng})
     except ValueError:
         return jsonify({"error": "bad date"}), 400
     finally:
@@ -142,6 +149,8 @@ PAGE = r"""<!doctype html>
   .stat{background:#20242e;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
   .stat .k{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
   .stat .v{font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+  .stat .s{color:var(--dim);font-size:11px;margin-top:3px}
+  .stat .s a{color:var(--accent);text-decoration:none}
   .chartwrap{overflow-x:auto}
   /* The chart scales to whatever the panel gives it (viewBox user units stay
      1040x260), so it never overflows into a scrollbar on a wide screen. The
@@ -215,11 +224,19 @@ let DAYS=[],CUR=null,PROF=null,PERIOD=null;
 function statBlock(el,s){
   if(!s||!s.buckets){el.innerHTML='<div class="empty">No data yet.</div>';return;}
   const f=new Date(s.first_ts*1000),l=new Date(s.last_ts*1000);
+  // Per-day energy, not min/max watt: a single 5-minute extreme says little
+  // about a period, while "kWh on a typical day" and "the worst day" do.
+  const day=s.max_kwh_date;
   el.innerHTML=[
-    ['Average',fmt(s.avg_w,'W')],['Min',fmt(s.min_w,'W')],['Max',fmt(s.max_w,'W')],
+    ['Average',fmt(s.avg_w,'W')],
+    ['Avg / day',fmt(s.avg_kwh_day,'kWh'),
+      s.days?`over ${s.days} day(s) with data`:''],
+    ['Max day',fmt(s.max_kwh,'kWh'),
+      day?`<a href="#" onclick="loadDay('${day}');return false">${day}</a>`:''],
     ['Energy',fmt(s.kwh,'kWh')],['Covered',fmt(s.covered_h,'h')],
     ['Range',f.toLocaleDateString()+' &ndash; '+l.toLocaleDateString()]
-  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  ].map(([k,v,sub])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div>`
+    +(sub?`<div class="s">${sub}</div>`:'')+`</div>`).join('');
 }
 
 // One renderer for both charts: the day series (x = unix ts inside the local

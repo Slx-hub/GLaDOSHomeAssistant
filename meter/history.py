@@ -308,9 +308,17 @@ def average_profile(conn, tz, start_ts: Optional[int] = None,
             for s, a in sorted(acc.items())]
 
 
-def days_with_data(conn, tz) -> List[dict]:
-    """One row per local calendar day that has data."""
-    cur = conn.execute("SELECT ts, watt FROM power_5min ORDER BY ts")
+def days_with_data(conn, tz, start_ts: Optional[int] = None,
+                   end_ts: Optional[int] = None) -> List[dict]:
+    """One row per local calendar day that has data.
+
+    Local days again, so the folding happens in python for the same reason as
+    average_profile: sqlite cannot name the local day of a UTC timestamp.
+    """
+    where, args = "", []
+    if start_ts is not None and end_ts is not None:
+        where, args = "WHERE ts >= ? AND ts < ?", [start_ts, end_ts]
+    cur = conn.execute(f"SELECT ts, watt FROM power_5min {where} ORDER BY ts", args)
     agg: Dict[str, List[float]] = {}
     for r in cur:
         day = datetime.fromtimestamp(r["ts"], tz).strftime("%Y-%m-%d")
@@ -318,3 +326,25 @@ def days_with_data(conn, tz) -> List[dict]:
     return [{"date": d, "buckets": len(v), "avg_w": round(sum(v) / len(v), 1),
              "kwh": round(sum(v) * BUCKET_S / 3_600_000.0, 3)}
             for d, v in sorted(agg.items())]
+
+
+def day_energy(conn, tz, start_ts: Optional[int] = None,
+               end_ts: Optional[int] = None) -> dict:
+    """Per-day energy over a range -> {days, avg_kwh_day, max_kwh, max_kwh_date}
+
+    avg_kwh_day is the mean over the calendar days that HAVE data, so a partial
+    day at either edge of the range (or a recording gap) pulls it down -- it is
+    "kWh per recorded day", not an extrapolated daily forecast. covered_h in
+    the same summary is what tells you how complete those days are.
+    """
+    rows = days_with_data(conn, tz, start_ts, end_ts)
+    if not rows:
+        return {"days": 0, "avg_kwh_day": None, "max_kwh": None,
+                "max_kwh_date": None}
+    top = max(rows, key=lambda r: r["kwh"])
+    return {
+        "days": len(rows),
+        "avg_kwh_day": round(sum(r["kwh"] for r in rows) / len(rows), 3),
+        "max_kwh": top["kwh"],
+        "max_kwh_date": top["date"],
+    }

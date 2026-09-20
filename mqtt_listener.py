@@ -21,6 +21,7 @@ from lib import alias_converter
 from lib import scheduler
 from lib import intent_randomizer
 from lib.device_state_store import DeviceStateStore
+from lib.replayer import Replayer
 
 import logging
 import sys
@@ -48,6 +49,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe("hermes/intent/#")
 	client.subscribe("hermes/nlu/intentNotRecognized")
 	client.subscribe("z2mq/bridge/event")
+	client.subscribe("z2mq/+")          # device state reports, for replay verification
 	logger.info("Connected!!")
 
 
@@ -67,6 +69,9 @@ def on_message(client, userdata, msg):
 	"""Called each time a message is received on a subscribed topic."""
 	if msg.topic == 'z2mq/bridge/event':
 		handle_bridge_event(client, msg)
+		return
+	if msg.topic.startswith('z2mq/'):
+		handle_device_state(msg)
 		return
 
 	payload = json.loads(msg.payload)
@@ -116,6 +121,20 @@ def enqueue_publish(topic, payload, direct=False):
 	else:
 		_publish_queue.put((topic, payload))
 
+replayer = Replayer(enqueue_publish)
+
+def handle_device_state(msg):
+	"""Forward z2mq/<device> state reports to the replayer."""
+	parts = msg.topic.split('/')
+	if len(parts) != 2 or parts[1] == 'bridge':
+		return
+	try:
+		reported = json.loads(msg.payload)
+	except (json.JSONDecodeError, ValueError):
+		return
+	if isinstance(reported, dict):
+		replayer.on_state(parts[1], reported)
+
 def handle_bridge_event(client, msg):
 	"""Replay stored state when a Zigbee device announces itself."""
 	try:
@@ -133,8 +152,8 @@ def handle_bridge_event(client, msg):
 	set_topic = f'z2mq/{device_name}/set'
 	stored_state = device_state.get_state(set_topic)
 	if stored_state:
-		logger.info("Device %s announced - queuing replay", device_name)
-		enqueue_publish(set_topic, stored_state)
+		logger.info("Device %s announced - starting replay", device_name)
+		replayer.on_announce(device_name, set_topic, stored_state)
 
 def on_scheduled(intent, command):
 	logger.info("Running scheduled job:  %s - %s" % (intent, command))

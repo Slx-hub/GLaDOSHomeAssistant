@@ -28,7 +28,7 @@ advanced:
     - 128
     - 182
     - 60
-  log_level: info
+  log_level: warning
 devices:
   '0xe0798dfffe7f4646':
     friendly_name: showcase
