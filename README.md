@@ -29,6 +29,10 @@ Bash shortcuts:
 - glstart, glstop, glrestart -> starts and stops GlaDOS Module
 - glados -> shows active GlaDOS Log
 
+Command page (phone friendly "text to recognize"): <http://192.168.178.30:5123/>
+- served by `http_bridge.py`, autocomplete is generated from the Rhasspy sentences on every page load
+- after changing `sentences.ini`, still hit **Train** in Rhasspy, otherwise the suggestions won't be understood
+
 Linux command to convert mp3 to wav:
 ```for i in *.mp3; do ffmpeg -i "$i" "${i%.*}.wav"; done ```
 

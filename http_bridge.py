@@ -1,5 +1,5 @@
 import paho.mqtt.client as mqtt
-from flask import Flask, request
+from flask import Flask, request, jsonify, send_from_directory
 import json
 import os
 import threading
@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 from lib import picture_frame_util
+from lib import sentence_templates
 
 kvv_request = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -99,6 +100,44 @@ def turn_on_livingroom(intent):
 def custom(message):
     mqtt_client.publish("hermes/nlu/query", json.dumps({"input": message, "siteId": "default"}))
     return "OK"
+
+# --- mobile command page ---
+# Replacement for the "text to recognize" box of the Rhasspy web UI, which is
+# unusable on a phone. Commands go through the same Rhasspy endpoint, so they
+# behave exactly like typed-in commands there.
+RHASSPY_API = "http://localhost:12101/api"
+WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+
+@app.route("/")
+def command_page():
+    return send_from_directory(WEB_DIR, "command.html")
+
+@app.route("/api/templates")
+def command_templates():
+    # Read on every page load, so edits to sentences.ini show up without
+    # restarting the bridge
+    try:
+        resp = requests.get(f"{RHASSPY_API}/sentences", headers={"Accept": "application/json"}, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        return jsonify(sentence_templates.build_templates(resp.json().values()))
+    except Exception as e:
+        logger.info("Failed to build sentence templates: %s" % e)
+        return jsonify({"error": str(e)}), 502
+
+@app.route("/api/command", methods=["POST"])
+def command():
+    text = (request.get_json(silent=True) or {}).get("text", "").strip()
+    if not text:
+        return jsonify({"error": "empty command"}), 400
+    try:
+        resp = requests.post(f"{RHASSPY_API}/text-to-intent", data=text.encode("utf-8"), timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        intent = resp.json().get("intent", {}).get("name") or ""
+    except Exception as e:
+        logger.info("Failed to send command '%s': %s" % (text, e))
+        return jsonify({"error": str(e)}), 502
+    logger.info("Command '%s' -> %s" % (text, intent or "not recognized"))
+    return jsonify({"text": text, "intent": intent})
 
 #####################################################################################
 

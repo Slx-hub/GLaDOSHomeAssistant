@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101216">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GLaDOS">
+<title>GLaDOS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23101216' stroke='%23ff9d2e' stroke-width='10'/><circle cx='50' cy='50' r='12' fill='%23ff9d2e'/></svg>">
+<style>
+  :root {
+    --bg: #101216;
+    --surface: #1a1d23;
+    --surface-hi: #242831;
+    --line: #2c313b;
+    --text: #e7e9ee;
+    --muted: #8b919e;
+    --accent: #ff9d2e;
+    --ok: #5fd08a;
+    --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 17px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+
+  form {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; gap: 8px;
+    padding-block: 16px 8px;
+    background: var(--bg);
+  }
+  .field { position: relative; flex: 1; min-width: 0; }
+  input {
+    width: 100%; height: 52px;
+    padding: 0 44px 0 16px;
+    font: inherit; color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line); border-radius: 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .clear {
+    position: absolute; right: 4px; top: 4px;
+    width: 44px; height: 44px;
+    border: 0; background: none; color: var(--muted);
+    font-size: 22px; line-height: 1;
+  }
+  .send {
+    flex: none; width: 52px; height: 52px;
+    border: 0; border-radius: 14px;
+    background: var(--accent); color: #1a1206;
+    display: grid; place-items: center;
+  }
+  .send:disabled { opacity: .5; }
+  .send svg { width: 24px; height: 24px; }
+
+  #status { min-height: 1.4em; margin: 0 4px 8px; font-size: 15px; color: var(--muted); }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+
+  .heading { margin: 8px 4px 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li button {
+    width: 100%; min-height: 48px;
+    padding: 12px 16px; margin-bottom: 6px;
+    text-align: left; font: inherit; color: var(--muted);
+    background: var(--surface); border: 0; border-radius: 12px;
+  }
+  li button:active { background: var(--surface-hi); }
+  .hit { color: var(--text); font-weight: 600; }
+  .recent li button { color: var(--text); }
+  .ph {
+    display: inline-block; padding: 0 7px; margin: 0 1px;
+    border-radius: 6px; font-size: 14px;
+    color: var(--accent); background: rgba(255, 157, 46, .12);
+  }
+</style>
+</head>
+<body>
+<main>
+  <form id="form" autocomplete="off">
+    <div class="field">
+      <input id="input" type="text" placeholder="Tell me what to do" aria-label="Command"
+             autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="send">
+      <button class="clear" id="clear" type="button" aria-label="Clear" hidden>&times;</button>
+    </div>
+    <button class="send" id="send" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </form>
+  <div id="status" role="status"></div>
+  <div class="heading" id="heading" hidden></div>
+  <ul id="list"></ul>
+</main>
+
+<script>
+const MAX_SUGGESTIONS = 8;
+const MAX_RECENT = 8;
+const RECENT_KEY = 'glados.recent';
+
+const form = document.getElementById('form');
+const input = document.getElementById('input');
+const clearBtn = document.getElementById('clear');
+const sendBtn = document.getElementById('send');
+const statusEl = document.getElementById('status');
+const heading = document.getElementById('heading');
+const list = document.getElementById('list');
+
+let templates = [];
+
+// ── recent commands ─────────────────────────────────────────────
+function loadRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+}
+function remember(text) {
+  const recent = [text, ...loadRecent().filter(t => t !== text)].slice(0, MAX_RECENT);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch {}
+}
+
+// ── matching ────────────────────────────────────────────────────
+// Typed words are matched in order against a template, but may skip template
+// words, so "lava off" finds "turn the lava lamp off". Any typed word may be
+// just the start of a template word. Number ranges accept digits in range.
+function inRange(t, n) {
+  return n >= t.min && n <= t.max && (n - t.min) % t.step === 0;
+}
+function couldBecomeInRange(t, s) {
+  if (t.max - t.min > 10000) return true;
+  for (let n = t.min; n <= t.max; n += t.step) if (String(n).startsWith(s)) return true;
+  return false;
+}
+function matchToken(t, q, isLast) {
+  if (typeof t === 'string') {
+    if (t === q) return { exact: true };
+    if (t.startsWith(q)) return { exact: false };
+    return null;
+  }
+  if (t.slot) return { exact: true, value: q };
+  if (!/^-?\d+$/.test(q)) return null;
+  if (inRange(t, Number(q))) return { exact: true, value: q };
+  if (isLast && couldBecomeInRange(t, q)) return { exact: false, value: q };
+  return null;
+}
+function match(tpl, words, typingLast) {
+  const tokens = tpl.tokens;
+  const hit = new Set();
+  const filled = {};
+  let pos = 0, cost = 0;
+  for (let i = 0; i < words.length; i++) {
+    const isLast = typingLast && i === words.length - 1;
+    let j = pos, m = null;
+    for (; j < tokens.length; j++) if ((m = matchToken(tokens[j], words[i], isLast))) break;
+    if (!m) return null;
+    cost += (j - pos) + (m.exact ? 0 : 0.5) + (i === 0 ? j * 0.5 : 0);
+    hit.add(j);
+    if (m.value !== undefined) filled[j] = m.value;
+    pos = j + 1;
+  }
+  return { tpl, hit, filled, cost, rest: tokens.length - pos };
+}
+function placeholder(t) {
+  return t.slot ? t.slot : `${t.min}–${t.max}`;
+}
+// Text up to the first number the user still has to type in.
+function completion(s) {
+  const out = [];
+  for (let j = 0; j < s.tpl.tokens.length; j++) {
+    const t = s.tpl.tokens[j];
+    if (typeof t === 'string') out.push(t);
+    else if (j in s.filled) out.push(s.filled[j]);
+    else return { text: out.join(' ') + ' ', complete: false };
+  }
+  return { text: out.join(' '), complete: true };
+}
+function suggest(value) {
+  const words = value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const typingLast = !/\s$/.test(value);
+  const found = [];
+  for (const tpl of templates) {
+    const m = match(tpl, words, typingLast);
+    if (m) found.push(m);
+  }
+  found.sort((a, b) => a.cost - b.cost || a.rest - b.rest || a.tpl.tokens.length - b.tpl.tokens.length);
+  const seen = new Set(), out = [];
+  for (const s of found) {
+    const key = s.tpl.tokens.map((t, j) => typeof t === 'string' ? t : (j in s.filled ? s.filled[j] : placeholder(t))).join(' ');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+    if (out.length === MAX_SUGGESTIONS) break;
+  }
+  return out;
+}
+
+// ── rendering ───────────────────────────────────────────────────
+function row(content, onPick) {
+  const li = document.createElement('li');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.append(...content);
+  // keep the keyboard open when tapping a suggestion
+  b.addEventListener('mousedown', e => e.preventDefault());
+  b.addEventListener('click', onPick);
+  li.append(b);
+  return li;
+}
+function suggestionContent(s) {
+  const parts = [];
+  s.tpl.tokens.forEach((t, j) => {
+    if (parts.length) parts.push(' ');
+    const span = document.createElement('span');
+    if (typeof t === 'string') {
+      span.textContent = t;
+      if (s.hit.has(j)) span.className = 'hit';
+    } else if (j in s.filled) {
+      span.textContent = s.filled[j];
+      span.className = 'hit';
+    } else {
+      span.textContent = placeholder(t);
+      span.className = 'ph';
+    }
+    parts.push(span);
+  });
+  return parts;
+}
+function setInput(text) {
+  input.value = text;
+  input.focus();
+  input.setSelectionRange(text.length, text.length);
+  render();
+}
+function render() {
+  const value = input.value;
+  clearBtn.hidden = !value;
+  list.replaceChildren();
+  list.className = '';
+  if (!value.trim()) {
+    const recent = loadRecent();
+    heading.hidden = !recent.length;
+    heading.textContent = 'Recent';
+    list.className = 'recent';
+    for (const text of recent) list.append(row([text], () => setInput(text)));
+    return;
+  }
+  heading.hidden = true;
+  for (const s of suggest(value)) {
+    list.append(row(suggestionContent(s), () => setInput(completion(s).text)));
+  }
+}
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = kind || '';
+}
+
+// ── sending ─────────────────────────────────────────────────────
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  sendBtn.disabled = true;
+  setStatus('Sending…');
+  try {
+    const resp = await fetch('api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || resp.statusText);
+    if (data.intent) {
+      setStatus(`✓ ${text}  ·  ${data.intent}`, 'ok');
+      remember(text);
+      input.value = '';
+      render();
+    } else {
+      setStatus(`✗ Not understood: “${text}”`, 'err');
+    }
+  } catch (err) {
+    setStatus(`⚠ ${err.message}`, 'err');
+  } finally {
+    sendBtn.disabled = false;
+  }
+});
+
+input.addEventListener('input', () => { setStatus(''); render(); });
+clearBtn.addEventListener('mousedown', e => e.preventDefault());
+clearBtn.addEventListener('click', () => { setStatus(''); setInput(''); });
+
+fetch('api/templates')
+  .then(r => r.json())
+  .then(data => {
+    if (!Array.isArray(data)) throw new Error(data.error || 'bad response');
+    templates = data;
+    render();
+  })
+  .catch(err => setStatus(`⚠ No autocomplete: ${err.message}`, 'err'));
+render();
+</script>
+</body>
+</html>

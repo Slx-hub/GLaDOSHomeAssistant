@@ -26,6 +26,8 @@
   - 'Alarm'
   - 'ChangeAlarmState'
   - 'ChangeAlarmTime'
+  'PictureFrame':
+  - 'PictureFrame'
 'HandlerSettings':
   'Zigbee':
     'ReceiverGroups':
