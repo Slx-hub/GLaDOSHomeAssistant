@@ -107,6 +107,7 @@
 const MAX_SUGGESTIONS = 8;
 const MAX_RECENT = 8;
 const RECENT_KEY = 'glados.recent';
+const TEMPLATES_KEY = 'glados.templates';
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -296,14 +297,18 @@ input.addEventListener('input', () => { setStatus(''); render(); });
 clearBtn.addEventListener('mousedown', e => e.preventDefault());
 clearBtn.addEventListener('click', () => { setStatus(''); setInput(''); });
 
+// Suggestions start from the copy of the last visit and are refreshed in the
+// background, so new images or sentences show up on the next render.
+try { templates = JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || []; } catch {}
 fetch('api/templates')
   .then(r => r.json())
   .then(data => {
     if (!Array.isArray(data)) throw new Error(data.error || 'bad response');
     templates = data;
+    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(data)); } catch {}
     render();
   })
-  .catch(err => setStatus(`⚠ No autocomplete: ${err.message}`, 'err'));
+  .catch(err => { if (!templates.length) setStatus(`⚠ No autocomplete: ${err.message}`, 'err'); });
 render();
 </script>
 </body>

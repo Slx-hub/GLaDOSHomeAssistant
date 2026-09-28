@@ -2,9 +2,10 @@
 
 Only the spoken form matters here, so tags ({name}, {name:value}),
 substitutions (word:sub, (a | b):sub) and converters (!int) are dropped.
-Number ranges (1..100) and $slot references are not expanded -- they would
-blow up the output (the alarm time alone is 24*60 combinations) -- and stay
-as placeholder tokens the page fills in from what the user typed.
+Number ranges (1..100) are not expanded -- they would blow up the output
+(the alarm time alone is 24*60 combinations) -- and stay as placeholder
+tokens the page fills in from what the user typed. $slot references expand
+to the slot's values when they are passed in, else they stay placeholders.
 
 See https://rhasspy.readthedocs.io/en/latest/training/#sentencesini
 """
@@ -46,8 +47,9 @@ def parse_ini(text):
 
 
 class _Expander:
-    def __init__(self, intents):
+    def __init__(self, intents, slots):
         self.intents = intents
+        self.slots = slots
         self.cache = {}
 
     def expand_intent(self, intent):
@@ -96,12 +98,21 @@ class _Expander:
         if tok.startswith('<'):
             return self._rule(tok[1:-1], intent), pos + 1
         if tok.startswith('$'):
-            return [({'slot': tok[1:]},)], pos + 1
+            return self._slot(tok[1:], intent), pos + 1
         number_range = _RANGE.match(tok)
         if number_range:
             low, high, step = number_range.groups()
             return [({'min': int(low), 'max': int(high), 'step': int(step or 1)},)], pos + 1
         return [(tok.lower(),)], pos + 1
+
+    def _slot(self, name, intent):
+        if name not in self.slots:
+            return [({'slot': name},)]
+        key = ('$', name)
+        if key not in self.cache:
+            # slot values are sentence fragments themselves, e.g. (a b):c
+            self.cache[key] = [v for value in self.slots[name] for v in self._expand(value, intent)]
+        return self.cache[key]
 
     def _rule(self, name, intent):
         # <rule> is local to the intent, <Intent.rule> reaches into another
@@ -122,13 +133,15 @@ class _Expander:
         return self.cache[key]
 
 
-def build_templates(ini_texts):
+def build_templates(ini_texts, slots=None):
     """Flatten one or more sentences.ini texts into
-    [{'intent': name, 'tokens': [word | {'min','max','step'} | {'slot'}]}]."""
+    [{'intent': name, 'tokens': [word | {'min','max','step'} | {'slot'}]}].
+
+    slots maps slot names to their values, as Rhasspy's /api/slots returns them."""
     intents = {}
     for text in ini_texts:
         intents.update(parse_ini(text))
-    expander = _Expander(intents)
+    expander = _Expander(intents, slots or {})
     templates, seen = [], set()
     for intent in intents:
         for variant in expander.expand_intent(intent):

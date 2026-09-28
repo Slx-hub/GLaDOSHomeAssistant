@@ -4,6 +4,8 @@ import json
 import os
 import threading
 import random
+import re
+import time
 import requests
 import xmltodict
 from datetime import datetime, timedelta
@@ -106,7 +108,50 @@ def custom(message):
 # unusable on a phone. Commands go through the same Rhasspy endpoint, so they
 # behave exactly like typed-in commands there.
 RHASSPY_API = "http://localhost:12101/api"
-WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WEB_DIR = os.path.join(BASE_DIR, "web")
+RHASSPY_PROFILE = os.path.join(BASE_DIR, "setup_files", "rhasspy-profiles", "en")
+PICTURE_SLOT = os.path.join(RHASSPY_PROFILE, "slots", "pictures")
+INTENT_GRAPH = os.path.join(RHASSPY_PROFILE, "intent_graph.pickle.gz")
+_picture_sync_lock = threading.Lock()
+
+def sync_picture_slot():
+    """Keep the $pictures slot in line with lib/pic_frame_images and retrain
+    Rhasspy when it changed, so new images can be named right away."""
+    with _picture_sync_lock:
+        lines = []
+        for name in picture_frame_util.list_glds_images():
+            spoken = re.sub(r"[\W_]+", " ", name).strip().lower()
+            if spoken:
+                lines.append(f"({spoken}):{name}\n")
+        content = "".join(lines)
+        try:
+            with open(PICTURE_SLOT) as f:
+                current = f.read()
+        except FileNotFoundError:
+            current = None
+        if current != content:
+            os.makedirs(os.path.dirname(PICTURE_SLOT), exist_ok=True)
+            with open(PICTURE_SLOT, "w") as f:
+                f.write(content)
+            logger.info("Updated picture slot, %d images" % len(lines))
+        # Comparing against the graph also retries a training that failed
+        # earlier, or one skipped after the slot file came in with a git pull
+        if os.path.exists(INTENT_GRAPH) and os.path.getmtime(INTENT_GRAPH) >= os.path.getmtime(PICTURE_SLOT):
+            return
+        resp = requests.post(f"{RHASSPY_API}/train", timeout=(5, 120))
+        resp.raise_for_status()
+        logger.info("Retrained Rhasspy: %s" % resp.text.strip())
+
+def sync_picture_slot_at_startup():
+    # Rhasspy may still be booting when the bridge starts
+    for _ in range(20):
+        try:
+            sync_picture_slot()
+            return
+        except Exception as e:
+            logger.info("Picture slot sync failed, retrying: %s" % e)
+            time.sleep(30)
 
 @app.route("/")
 def command_page():
@@ -117,9 +162,13 @@ def command_templates():
     # Read on every page load, so edits to sentences.ini show up without
     # restarting the bridge
     try:
+        sync_picture_slot()
         resp = requests.get(f"{RHASSPY_API}/sentences", headers={"Accept": "application/json"}, timeout=HTTP_TIMEOUT)
         resp.raise_for_status()
-        return jsonify(sentence_templates.build_templates(resp.json().values()))
+        sentences = resp.json().values()
+        resp = requests.get(f"{RHASSPY_API}/slots", timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        return jsonify(sentence_templates.build_templates(sentences, resp.json()))
     except Exception as e:
         logger.info("Failed to build sentence templates: %s" % e)
         return jsonify({"error": str(e)}), 502
@@ -209,12 +258,15 @@ def fill_variables(content: str) -> str:
     return filled
 
 
-def picture_frame_send_image():
+def picture_frame_send_image(name=None):
+    image = picture_frame_util.load_named_glds_image(name) if name else picture_frame_util.load_random_glds_image()
+    if not image:
+        return
     try:
         resp = requests.post(
             "http://192.168.178.42/image",
             headers={"Content-Type": "application/octet-stream"},
-            data=picture_frame_util.load_random_glds_image(),
+            data=image,
             timeout=HTTP_TIMEOUT
         )
         logger.info("Displayed image, response %s" % resp.status_code)
@@ -286,11 +338,15 @@ def on_message(client, userdata, msg):
             return
 
         if "input" in payload:
-            command = payload["input"]
+            # "<action> [argument]", e.g. "pf_display_image japan_cats"
+            command, _, argument = payload["input"].strip().partition(" ")
             func = actions.get(command)
             if func:
-                logger.info("Executing action for input: %s" % command)
-                func()
+                logger.info("Executing action for input: %s" % payload["input"])
+                try:
+                    func(argument) if argument else func()
+                except TypeError:
+                    logger.info("Action %s takes no argument" % command)
             else:
                 logger.info("No action defined for input: %s" % command)
 
@@ -301,6 +357,7 @@ mqtt_client.on_disconnect = on_disconnect
 mqtt_client.on_message = on_message
 mqtt_client.connect("localhost", 1883)
 mqtt_client.loop_start()  # runs network loop in background
+threading.Thread(target=sync_picture_slot_at_startup, daemon=True).start()
 
 # --- Start HTTP server ---
 if __name__ == "__main__":

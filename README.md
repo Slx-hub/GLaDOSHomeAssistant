@@ -32,6 +32,7 @@ Bash shortcuts:
 Command page (phone friendly "text to recognize"): <http://192.168.178.30:5123/>
 - served by `http_bridge.py`, autocomplete is generated from the Rhasspy sentences on every page load
 - after changing `sentences.ini`, still hit **Train** in Rhasspy, otherwise the suggestions won't be understood
+- `show picture <name>` works for every `.glds` in `lib/pic_frame_images/`. The bridge writes the `$pictures` slot and retrains by itself, at startup and on page load (the scheduler takes names too: `hermes/http/PictureFrame> pf_display_image molly_hide`)
 
 Linux command to convert mp3 to wav:
 ```for i in *.mp3; do ffmpeg -i "$i" "${i%.*}.wav"; done ```

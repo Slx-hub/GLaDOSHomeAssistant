@@ -18,8 +18,24 @@ logger = logging.getLogger(__name__)
 ## GLDS FILES
 ##############################
 
+IMAGE_FOLDER = "./lib/pic_frame_images/"
+
+def list_glds_images():
+    """Names (file name without .glds) of all displayable images, sorted."""
+    return sorted(f[:-5] for f in os.listdir(IMAGE_FOLDER)
+                  if f.endswith(".glds") and os.path.isfile(os.path.join(IMAGE_FOLDER, f)))
+
+def load_named_glds_image(name):
+    # Only names from the folder listing, so a name can never escape it
+    matches = [n for n in list_glds_images() if n.lower() == name.lower()]
+    if not matches:
+        logger.info("No image named %s in %s" % (name, IMAGE_FOLDER))
+        return
+    with open(os.path.join(IMAGE_FOLDER, matches[0] + ".glds"), "rb") as f:
+        return f.read()
+
 def load_random_glds_image():
-    folder = "./lib/pic_frame_images/"
+    folder = IMAGE_FOLDER
     files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not files:
         logger.info("No images found in %s" % folder)

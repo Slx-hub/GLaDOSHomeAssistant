@@ -10,4 +10,7 @@ class PictureFrame(Receiver):
 		action = intent.slots.get('action')
 		if action not in ACTIONS:
 			return None
-		return Reply(next_intent=f'hermes/http/PictureFrame> {action}')
+		# "pf_display_image japan_cats" shows that image instead of a random one
+		image = intent.slots.get('image')
+		command = f'{action} {image}' if image else action
+		return Reply(next_intent=f'hermes/http/PictureFrame> {command}')
